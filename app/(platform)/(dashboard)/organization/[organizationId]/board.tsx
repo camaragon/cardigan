@@ -1,4 +1,4 @@
-import { deleteBoard } from "@/app/actions/delete-board";
+import { deleteBoard } from "@/actions/delete-board";
 import { FormDelete } from "./form-delete";
 
 interface BoardProps {
