@@ -7,8 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "postinstall": "npm run schema:generate",
     "schema:generate": "dotenv -e .env.local -- npx prisma generate",
     "schema:push": "dotenv -e .env.local -- npx prisma db push",
+    "schema:reset": "dotenv -e .env.local -- npx prisma migrate reset",
     "schema:studio": "dotenv -e .env.local -- npx prisma studio"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
     "react-dom": "^19.0.0",
     "sonner": "^2.0.5",
     "tailwind-merge": "^3.2.0",
+    "unsplash-js": "^7.0.19",
     "usehooks-ts": "^3.1.1",
     "zod": "^3.25.67"
   },
