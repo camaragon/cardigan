@@ -1,4 +1,4 @@
-"use client";
+"use-client";
 
 import { List } from "@prisma/client";
 import {
@@ -15,6 +15,7 @@ import { useAction } from "@/hooks/use-action";
 import { deleteList } from "@/actions/delete-list";
 import { toast } from "sonner";
 import { useRef } from "react";
+import { cloneList } from "@/actions/clone-list";
 
 interface ListOptionsProps {
   data: List;
@@ -33,11 +34,28 @@ export const ListOptions = ({ data, onAddCard }: ListOptionsProps) => {
     },
   });
 
+  const { execute: executeClone } = useAction(cloneList, {
+    onSuccess: (data) => {
+      toast.success(`List "${data.title}" cloned `);
+      closeRef.current?.click();
+    },
+    onError: (error) => {
+      toast.error(error);
+    },
+  });
+
   const onDelete = (formData: FormData) => {
     const id = formData.get("id") as string;
     const boardId = formData.get("boardId") as string;
 
     executeDelete({ id, boardId });
+  };
+
+  const onClone = (formData: FormData) => {
+    const id = formData.get("id") as string;
+    const boardId = formData.get("boardId") as string;
+
+    executeClone({ id, boardId });
   };
 
   return (
@@ -66,14 +84,14 @@ export const ListOptions = ({ data, onAddCard }: ListOptionsProps) => {
         >
           Add card...
         </Button>
-        <form>
+        <form action={onClone}>
           <input hidden name="id" id="id" value={data.id} />
           <input hidden name="boardId" id="boardId" value={data.boardId} />
           <FormSubmit
             variant="ghost"
             className="rounded-none w-full h-auto p-2 px-5 justify-start font-normal text-sm"
           >
-            Copy list...
+            Clone list...
           </FormSubmit>
         </form>
         <Separator />
