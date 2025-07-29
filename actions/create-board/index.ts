@@ -31,16 +31,33 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     imageUserName,
   });
 
-  if (
-    !imageId ||
-    !imageThumbUrl ||
-    !imageFullUrl ||
-    !imageLinkHTML ||
-    !imageUserName
-  ) {
-    return {
-      error: "Missing fields. Failed to create board",
-    };
+  // Handle uploaded images differently
+  let finalImageId = imageId;
+  let finalThumbUrl = imageThumbUrl;
+  let finalFullUrl = imageFullUrl;
+  let finalLinkHTML = imageLinkHTML;
+  let finalUserName = imageUserName;
+
+  if (imageId === "uploaded") {
+    // For uploaded images, use the data URL as both thumb and full URL
+    finalImageId = `uploaded-${Date.now()}`;
+    finalThumbUrl = imageThumbUrl; // This will be the data URL
+    finalFullUrl = imageFullUrl; // This will be the same data URL
+    finalLinkHTML = "";
+    finalUserName = "Custom Upload";
+  } else {
+    // For Unsplash images, validate all fields are present
+    if (
+      !imageId ||
+      !imageThumbUrl ||
+      !imageFullUrl ||
+      !imageLinkHTML ||
+      !imageUserName
+    ) {
+      return {
+        error: "Missing fields. Failed to create board",
+      };
+    }
   }
 
   let board;
@@ -50,11 +67,11 @@ const handler = async (data: InputType): Promise<ReturnType> => {
       data: {
         title,
         orgId,
-        imageId,
-        imageThumbUrl,
-        imageFullUrl,
-        imageUserName,
-        imageLinkHTML,
+        imageId: finalImageId,
+        imageThumbUrl: finalThumbUrl,
+        imageFullUrl: finalFullUrl,
+        imageUserName: finalUserName,
+        imageLinkHTML: finalLinkHTML,
       },
     });
 
