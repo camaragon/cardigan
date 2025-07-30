@@ -25,7 +25,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
     user: { name: string };
   }>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedImageId, setSelectedImageId] = useState(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
