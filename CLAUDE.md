@@ -2,9 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Workflow
+
+**Always follow `AGENTS.md` for the development workflow.** It defines the full pipeline: planning with OpenSpec, execution with Beads (`bd`), and session management. Start every session with `bd ready`.
+
 ## Development Commands
 
-- **Start development server**: `npm run dev` (uses turbopack for faster builds)
+- **Start development server**: `npm run dev` (uses turbopack)
 - **Build for production**: `npm run build`
 - **Lint code**: `npm run lint`
 - **Database operations**:
@@ -12,6 +16,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - Push schema changes: `npm run schema:push`
   - Reset database: `npm run schema:reset`
   - Open Prisma Studio: `npm run schema:studio`
+
+No test framework is configured. Prisma client is auto-generated on `npm install` via postinstall hook.
 
 ## Project Architecture
 
@@ -29,6 +35,8 @@ This is a **Trello-like Kanban board application** built with Next.js 15, featur
 The application follows a hierarchical structure:
 - **Organizations** → **Boards** → **Lists** → **Cards**
 - Each entity has audit logging through the `AuditLog` model
+- **OrgLimit** tracks free tier board count per org (max 5, defined in `constants/boards.ts`)
+- **OrgSubscription** stores Stripe subscription state per org
 - Cards support descriptions and ordering within lists
 - Lists support ordering within boards
 
@@ -38,8 +46,9 @@ The application follows a hierarchical structure:
 All mutations use a consistent server action pattern:
 - Located in `/actions/[entity-name]/` directories
 - Each action has `index.ts` (handler), `schema.ts` (Zod validation), `types.ts` (TypeScript types)
-- Wrapped with `createSafeAction` utility for validation and error handling
-- Example: `actions/create-board/index.ts`
+- `createSafeAction` (`lib/create-safe-action.ts`) validates input with Zod, returns `{ fieldErrors, error, data }`
+- Client-side: `useAction` hook (`hooks/use-action.ts`) wraps action calls with `onSuccess`/`onError`/`onComplete` callbacks and loading state
+- Handlers check auth, enforce subscription/free-tier limits, create audit logs, and call `revalidatePath`
 
 #### Route Structure
 - **Marketing pages**: `app/(marketing)/` - public landing pages
@@ -48,6 +57,7 @@ All mutations use a consistent server action pattern:
   - **Dashboard**: `(dashboard)/` - main application interface
     - Organization pages: `organization/[organizationId]/`
     - Board pages: `board/[boardId]/`
+- **API routes**: `app/api/webhook/` - Stripe webhook endpoint (public route in middleware)
 
 #### Component Organization
 - **UI components**: `components/ui/` - Radix UI based design system

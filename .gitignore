@@ -45,5 +45,8 @@ next-env.d.ts
 
 /lib/generated/prisma
 
-# claude
-CLAUDE.md
+# Agent-specific ignores
+.amazonq
+.claude
+.beads/*
+!.beads/issues.jsonl
