@@ -8,9 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-- **Start development server**: `npm run dev` (uses turbopack)
+- **Start development server**: `npm run dev` (Turbopack is the default bundler)
 - **Build for production**: `npm run build`
-- **Lint code**: `npm run lint`
+- **Lint code**: `npm run lint` (runs ESLint directly)
 - **Database operations**:
   - Generate Prisma client: `npm run schema:generate`
   - Push schema changes: `npm run schema:push`
@@ -21,10 +21,10 @@ No test framework is configured. Prisma client is auto-generated on `npm install
 
 ## Project Architecture
 
-This is a **Trello-like Kanban board application** built with Next.js 15, featuring organization-based workspaces with full CRUD operations for boards, lists, and cards.
+This is a **Trello-like Kanban board application** built with Next.js 16, featuring organization-based workspaces with full CRUD operations for boards, lists, and cards.
 
 ### Core Stack
-- **Framework**: Next.js 15 with App Router and Turbopack
+- **Framework**: Next.js 16 with App Router and Turbopack
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: Clerk (with organization support)
 - **UI**: Tailwind CSS + Radix UI components
@@ -57,7 +57,7 @@ All mutations use a consistent server action pattern:
   - **Dashboard**: `(dashboard)/` - main application interface
     - Organization pages: `organization/[organizationId]/`
     - Board pages: `board/[boardId]/`
-- **API routes**: `app/api/webhook/` - Stripe webhook endpoint (public route in middleware)
+- **API routes**: `app/api/webhook/` - Stripe webhook endpoint (public route in proxy)
 
 #### Component Organization
 - **UI components**: `components/ui/` - Radix UI based design system
@@ -72,7 +72,7 @@ All mutations use a consistent server action pattern:
 
 #### Authentication & Authorization
 - Clerk handles authentication with organization switching
-- Middleware enforces auth on protected routes
+- `proxy.ts` (Next.js 16 convention, replaces `middleware.ts`) enforces auth on protected routes
 - Organization-scoped data access throughout the application
 
 ### Database Schema Notes

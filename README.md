@@ -1,6 +1,6 @@
 # Cardigan
 
-A full-featured Trello-like Kanban board application built with Next.js 15. Organize projects with boards, lists, and cards in organization-based workspaces.
+A full-featured Trello-like Kanban board application built with Next.js 16. Organize projects with boards, lists, and cards in organization-based workspaces.
 
 ## Features
 
@@ -15,7 +15,7 @@ A full-featured Trello-like Kanban board application built with Next.js 15. Orga
 
 | Category | Tools |
 |---|---|
-| Framework | Next.js 15 (App Router, Turbopack), TypeScript |
+| Framework | Next.js 16 (App Router, Turbopack), TypeScript |
 | Database | PostgreSQL, Prisma ORM |
 | Authentication | Clerk (with organization support) |
 | Payments | Stripe (subscriptions, webhooks) |
@@ -52,7 +52,7 @@ cardigan/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20.9+
 - PostgreSQL database
 - Clerk account
 - Stripe account (for subscriptions)
@@ -137,11 +137,11 @@ Organizations -> Boards -> Lists -> Cards
 
 ### Authentication
 
-Clerk handles auth with middleware enforcing protected routes. All data access is scoped to the current organization.
+Clerk handles auth with `proxy.ts` (Next.js 16 convention, replaces `middleware.ts`) enforcing protected routes. All data access is scoped to the current organization.
 
 ## Deployment
 
-Optimized for Vercel. Connect the repository, set all environment variables from `.env.local`, and deploy. The Stripe webhook endpoint (`/api/webhook`) is configured as a public route in middleware.
+Optimized for Vercel. Connect the repository, set all environment variables from `.env.local`, and deploy. The Stripe webhook endpoint (`/api/webhook`) is configured as a public route in `proxy.ts`.
 
 ## License
 
