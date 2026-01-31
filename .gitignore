@@ -44,9 +44,9 @@ next-env.d.ts
 /.clerk/
 
 /lib/generated/prisma
-
-# Agent-specific ignores
-.amazonq
-.claude
-.beads/*
+skills/
+openspec/
+.*/ 
 !.beads/issues.jsonl
+!.git/
+!.github/
