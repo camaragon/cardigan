@@ -17,6 +17,18 @@ openspec list                 # Any changes pending approval?
 
 ---
 
+## Required Skills
+
+**Always read and follow these skills when making or reviewing changes:**
+
+1. **`.claude/skills/vercel-composition-patterns`** — Server/client component composition rules
+2. **`.claude/skills/vercel-react-best-practices`** — React and Next.js best practices from Vercel Engineering
+3. **`.claude/skills/web-design-guidelines`** — UI/UX and web design standards
+
+Before implementing or reviewing any code change, read these skill files and apply their guidelines. They are mandatory, not optional.
+
+---
+
 ## The Pipeline
 
 ```
