@@ -28,6 +28,13 @@ const BoardIdPage = async ({ params }: BoardIdPageProps) => {
         orderBy: {
           order: "asc",
         },
+        include: {
+          labels: {
+            include: {
+              label: true,
+            },
+          },
+        },
       },
     },
     orderBy: {

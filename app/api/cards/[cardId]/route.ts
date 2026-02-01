@@ -30,6 +30,11 @@ export async function GET(
             title: true,
           },
         },
+        labels: {
+          include: {
+            label: true,
+          },
+        },
       },
     });
 
