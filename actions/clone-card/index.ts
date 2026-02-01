@@ -31,6 +31,9 @@ const handler = async (data: InputType): Promise<ReturnType> => {
           },
         },
       },
+      include: {
+        labels: true,
+      },
     });
 
     if (!cardToClone) {
@@ -57,6 +60,13 @@ const handler = async (data: InputType): Promise<ReturnType> => {
         description: cardToClone.description,
         order: newOrder,
         listId: cardToClone.listId,
+        labels: {
+          createMany: {
+            data: cardToClone.labels.map((cl) => ({
+              labelId: cl.labelId,
+            })),
+          },
+        },
       },
     });
 

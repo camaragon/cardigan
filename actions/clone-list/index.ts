@@ -31,7 +31,11 @@ const handler = async (data: InputType): Promise<ReturnType> => {
         },
       },
       include: {
-        cards: true,
+        cards: {
+          include: {
+            labels: true,
+          },
+        },
       },
     });
 
@@ -71,6 +75,25 @@ const handler = async (data: InputType): Promise<ReturnType> => {
         cards: true,
       },
     });
+
+    // Copy labels from original cards to cloned cards
+    // Sort both arrays by order to align by index (createMany preserves insertion order)
+    const sortedOriginals = [...listToClone.cards].sort((a, b) => a.order - b.order);
+    const sortedClones = [...list.cards].sort((a, b) => a.order - b.order);
+
+    const labelRecords: { cardId: string; labelId: string }[] = [];
+    for (let i = 0; i < sortedClones.length; i++) {
+      const originalCard = sortedOriginals[i];
+      if (originalCard && originalCard.labels.length > 0) {
+        for (const cl of originalCard.labels) {
+          labelRecords.push({ cardId: sortedClones[i].id, labelId: cl.labelId });
+        }
+      }
+    }
+
+    if (labelRecords.length > 0) {
+      await db.cardLabel.createMany({ data: labelRecords });
+    }
 
     await createAuditLog({
       entityTitle: list.title,
