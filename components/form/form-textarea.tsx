@@ -1,4 +1,4 @@
-"use-client";
+"use client";
 
 import { forwardRef, KeyboardEventHandler } from "react";
 import { Label } from "@/components/ui/label";
