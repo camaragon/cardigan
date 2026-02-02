@@ -19,7 +19,7 @@ A full-featured Trello-like Kanban board application built with Next.js 16. Orga
 | Database | PostgreSQL, Prisma ORM |
 | Authentication | Clerk (with organization support) |
 | Payments | Stripe (subscriptions, webhooks) |
-| UI | Tailwind CSS, Radix UI, Lucide React, next-themes |
+| UI | Tailwind CSS, shadcn/ui, Lucide React, next-themes |
 | State | Zustand (client), TanStack Query (server) |
 | Drag and Drop | @hello-pangea/dnd |
 | Validation | Zod |

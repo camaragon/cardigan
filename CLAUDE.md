@@ -27,7 +27,7 @@ This is a **Trello-like Kanban board application** built with Next.js 16, featur
 - **Framework**: Next.js 16 with App Router and Turbopack
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: Clerk (with organization support)
-- **UI**: Tailwind CSS + Radix UI components
+- **UI**: Tailwind CSS + shadcn/ui components
 - **State Management**: Zustand for client state, TanStack Query for server state
 - **Drag & Drop**: @hello-pangea/dnd for card/list reordering
 
@@ -60,7 +60,7 @@ All mutations use a consistent server action pattern:
 - **API routes**: `app/api/webhook/` - Stripe webhook endpoint (public route in proxy)
 
 #### Component Organization
-- **UI components**: `components/ui/` - Radix UI based design system
+- **UI components**: `components/ui/` - shadcn/ui based design system
 - **Form components**: `components/form/` - reusable form inputs with validation
 - **Modal components**: `components/modal/` - complex modal dialogs
 - **Feature components**: Co-located with pages in `_components/` directories
