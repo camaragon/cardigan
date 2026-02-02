@@ -80,7 +80,7 @@ export const Description = ({ data }: DescriptionProps) => {
           <form action={onSubmit} ref={formRef}>
             <FormTextarea
               id="description"
-              className="w-full mt-2 mb-2"
+              className="w-full mt-2 mb-2 max-h-[40vh] overflow-y-auto"
               placeholder="Add a more detailed description"
               defaultValue={data.description ?? undefined}
               errors={fieldErrors}
@@ -102,7 +102,7 @@ export const Description = ({ data }: DescriptionProps) => {
           <div
             onClick={enableEditing}
             role="button"
-            className="min-h-[78px] bg-neutral-200 text-sm font-medium py-3 px-3.5 rounded-md"
+            className="min-h-[78px] max-h-[40vh] overflow-y-auto overscroll-contain bg-neutral-200 text-sm font-medium py-3 px-3.5 rounded-md whitespace-pre-wrap [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-1 [&::-webkit-scrollbar-thumb]:bg-neutral-400 [&::-webkit-scrollbar-thumb]:rounded-full"
           >
             {data.description ?? "Add a more detailed description..."}
           </div>
