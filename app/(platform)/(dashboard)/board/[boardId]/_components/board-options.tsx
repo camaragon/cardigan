@@ -11,7 +11,7 @@ import { MoreHorizontal, X } from "lucide-react";
 import { deleteBoard } from "@/actions/delete-board/index";
 import { useAction } from "@/hooks/use-action";
 import { toast } from "sonner";
-import { BackgroundPopover } from "@/components/form/background-popover";
+import { FormPopover } from "@/components/form/form-popover";
 
 interface BoardOptionsProps {
   id: string;
@@ -47,14 +47,14 @@ export const BoardOptions = ({ id }: BoardOptionsProps) => {
             <X className="h-4 w-4" />
           </Button>
         </PopoverClose>
-        <BackgroundPopover boardId={id} side="left" sideOffset={10}>
+        <FormPopover mode="update" boardId={id} side="left" sideOffset={10}>
           <Button
             variant="ghost"
             className="rounded-none w-full h-auto p-2 px-5 justify-start font-normal text-sm"
           >
             Change background
           </Button>
-        </BackgroundPopover>
+        </FormPopover>
         <Button
           disabled={isLoading}
           onClick={onDelete}
