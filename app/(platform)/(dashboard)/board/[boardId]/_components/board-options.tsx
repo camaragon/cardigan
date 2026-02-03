@@ -7,19 +7,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Image, MoreHorizontal, X } from "lucide-react";
+import { MoreHorizontal, X } from "lucide-react";
 import { deleteBoard } from "@/actions/delete-board/index";
 import { useAction } from "@/hooks/use-action";
 import { toast } from "sonner";
-import { useBackgroundModal } from "@/hooks/use-background-modal";
+import { BackgroundPopover } from "@/components/form/background-popover";
 
 interface BoardOptionsProps {
   id: string;
 }
 
 export const BoardOptions = ({ id }: BoardOptionsProps) => {
-  const backgroundModal = useBackgroundModal();
-
   const { execute, isLoading } = useAction(deleteBoard, {
     onError: (error) => {
       toast.error(error);
@@ -28,10 +26,6 @@ export const BoardOptions = ({ id }: BoardOptionsProps) => {
 
   const onDelete = () => {
     execute({ id });
-  };
-
-  const onChangeBackground = () => {
-    backgroundModal.onOpen(id);
   };
 
   return (
@@ -53,16 +47,14 @@ export const BoardOptions = ({ id }: BoardOptionsProps) => {
             <X className="h-4 w-4" />
           </Button>
         </PopoverClose>
-        <PopoverClose asChild>
+        <BackgroundPopover boardId={id} side="left" sideOffset={10}>
           <Button
-            onClick={onChangeBackground}
             variant="ghost"
             className="rounded-none w-full h-auto p-2 px-5 justify-start font-normal text-sm"
           >
-            <Image className="h-4 w-4 mr-2" />
             Change background
           </Button>
-        </PopoverClose>
+        </BackgroundPopover>
         <Button
           disabled={isLoading}
           onClick={onDelete}
