@@ -18,7 +18,54 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     };
   }
 
-  const { title, id } = data;
+  const { title, image, id } = data;
+
+  // Build update data object
+  const updateData: {
+    title?: string;
+    imageId?: string;
+    imageThumbUrl?: string;
+    imageFullUrl?: string;
+    imageLinkHTML?: string;
+    imageUserName?: string;
+  } = {};
+
+  if (title) {
+    updateData.title = title;
+  }
+
+  if (image) {
+    const [imageId, imageThumbUrl, imageFullUrl, imageLinkHTML, imageUserName] =
+      image.split("|");
+
+    if (imageId === "uploaded") {
+      // For uploaded images, use the data URL as both thumb and full URL
+      updateData.imageId = `uploaded-${Date.now()}`;
+      updateData.imageThumbUrl = imageThumbUrl;
+      updateData.imageFullUrl = imageFullUrl;
+      updateData.imageLinkHTML = "";
+      updateData.imageUserName = "Custom Upload";
+    } else {
+      // For Unsplash images, validate all fields are present
+      if (
+        !imageId ||
+        !imageThumbUrl ||
+        !imageFullUrl ||
+        !imageLinkHTML ||
+        !imageUserName
+      ) {
+        return {
+          error: "Missing image fields. Failed to update board",
+        };
+      }
+      updateData.imageId = imageId;
+      updateData.imageThumbUrl = imageThumbUrl;
+      updateData.imageFullUrl = imageFullUrl;
+      updateData.imageLinkHTML = imageLinkHTML;
+      updateData.imageUserName = imageUserName;
+    }
+  }
+
   let board;
 
   try {
@@ -27,9 +74,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
         id,
         orgId,
       },
-      data: {
-        title,
-      },
+      data: updateData,
     });
 
     await createAuditLog({

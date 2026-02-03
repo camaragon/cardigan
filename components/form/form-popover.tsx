@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { useAction } from "@/hooks/use-action";
 import { createBoard } from "@/actions/create-board";
+import { updateBoard } from "@/actions/update-board";
 import { FormInput } from "./form-input";
 import { FormSubmit } from "./form-submit";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ interface FormPopoverProps {
   side?: "top" | "bottom" | "left" | "right";
   align?: "start" | "center" | "end";
   sideOffset?: number;
+  mode?: "create" | "update";
+  boardId?: string;
 }
 
 export const FormPopover = ({
@@ -30,29 +33,65 @@ export const FormPopover = ({
   side = "bottom",
   align,
   sideOffset = 0,
+  mode = "create",
+  boardId,
 }: FormPopoverProps) => {
   const proModal = useProModal();
   const router = useRouter();
   const closeRef = useRef<HTMLButtonElement>(null);
 
-  const { execute, fieldErrors } = useAction(createBoard, {
-    onSuccess: (data) => {
-      toast.success("Board created!");
-      closeRef.current?.click();
-      router.push(`/board/${data.id}`);
-    },
-    onError: (error) => {
-      toast.error(error);
-      proModal.onOpen();
-    },
-  });
+  const { execute: executeCreate, fieldErrors: createErrors } = useAction(
+    createBoard,
+    {
+      onSuccess: (data) => {
+        toast.success("Board created!");
+        closeRef.current?.click();
+        router.push(`/board/${data.id}`);
+      },
+      onError: (error) => {
+        toast.error(error);
+        proModal.onOpen();
+      },
+    }
+  );
+
+  const { execute: executeUpdate, fieldErrors: updateErrors } = useAction(
+    updateBoard,
+    {
+      onSuccess: (data) => {
+        toast.success(`Background updated for "${data.title}"`);
+        closeRef.current?.click();
+        router.refresh();
+      },
+      onError: (error) => {
+        toast.error(error);
+      },
+    }
+  );
+
+  const fieldErrors = mode === "create" ? createErrors : updateErrors;
 
   const onSubmit = (formData: FormData) => {
-    const title = formData.get("title") as string;
     const image = formData.get("image") as string;
 
-    execute({ title, image });
+    if (!image) {
+      toast.error("Please select an image");
+      return;
+    }
+
+    if (mode === "create") {
+      const title = formData.get("title") as string;
+      executeCreate({ title, image });
+    } else {
+      if (!boardId) {
+        toast.error("Board ID is required for update");
+        return;
+      }
+      executeUpdate({ id: boardId, image });
+    }
   };
+
+  const isCreateMode = mode === "create";
 
   return (
     <Popover>
@@ -64,7 +103,7 @@ export const FormPopover = ({
         sideOffset={sideOffset}
       >
         <div className="text-sm font-medium text-center text-neutral-600 pb-4">
-          Create board
+          {isCreateMode ? "Create board" : "Change background"}
         </div>
         <PopoverClose asChild ref={closeRef}>
           <Button
@@ -77,14 +116,18 @@ export const FormPopover = ({
         <form action={onSubmit} className="space-y-4">
           <div className="space-y-4">
             <FormPicker id="image" errors={fieldErrors} />
-            <FormInput
-              id="title"
-              label="Board title"
-              type="text"
-              errors={fieldErrors}
-            />
+            {isCreateMode && (
+              <FormInput
+                id="title"
+                label="Board title"
+                type="text"
+                errors={fieldErrors}
+              />
+            )}
           </div>
-          <FormSubmit className="w-full">Create</FormSubmit>
+          <FormSubmit className="w-full">
+            {isCreateMode ? "Create" : "Update background"}
+          </FormSubmit>
         </form>
       </PopoverContent>
     </Popover>
