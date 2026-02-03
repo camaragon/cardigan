@@ -18,7 +18,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     };
   }
 
-  const { id, boardId, ...values } = data;
+  const { id, boardId, dueDate, ...values } = data;
   let card;
 
   try {
@@ -33,6 +33,9 @@ const handler = async (data: InputType): Promise<ReturnType> => {
       },
       data: {
         ...values,
+        ...(dueDate !== undefined && {
+          dueDate: dueDate ? new Date(dueDate) : null,
+        }),
       },
     });
 

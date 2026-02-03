@@ -22,5 +22,6 @@ export const UpdateCard = z.object({
         message: "Title must be at least 3 characters long",
       }),
   ),
+  dueDate: z.optional(z.nullable(z.string().datetime())),
   id: z.string(),
 });
