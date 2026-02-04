@@ -12,6 +12,7 @@ import { Actions } from "./actions";
 import { AuditLog } from "@prisma/client";
 import { Activity } from "./activity";
 import { Labels } from "./labels";
+import { DueDate } from "./due-date";
 
 export const CardModal = () => {
   const id = useCardModal((state) => state.id);
@@ -39,6 +40,7 @@ export const CardModal = () => {
           <div className="col-span-3">
             <div className="w-full space-y-6">
               {!cardData ? Labels.Skeleton() : <Labels data={cardData} />}
+              {!cardData ? DueDate.Skeleton() : <DueDate data={cardData} />}
               {!cardData ? (
                 Description.Skeleton()
               ) : (
