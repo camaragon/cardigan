@@ -48,12 +48,10 @@ Waiting on owner shows the notice "Answer in chat". Reordering is owner only on
 every product list. Roles: PM may create, update, comment and mark duplicates;
 supervisor may create, update, move and comment. Any role may comment on any card.
 
-Friction intake (PRD C-9) is not a list rule while the write-only exception stands.
-A server setting names Cardigan's own workspace and board; setup adds a Friction
-list there, and the domain layer's friction-report function is the only path that
-writes into it from another workspace. If the owner chooses reporter tokens instead
-(ADR 0001), the Friction list becomes an ordinary list whose entry is limited to a
-"reporter" role, and the server setting goes away.
+The suggestion box (PRD C-9) is not a list rule. A server setting names Cardigan's
+own workspace and board; setup adds a Suggestion box list there, and the domain
+layer's friction-report function is the only path that writes into it from another
+workspace.
 
 In this first slice settings are shown in workspace settings but fixed by the
 template: changing a rule means changing the template and re-applying it. Agents

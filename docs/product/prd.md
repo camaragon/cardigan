@@ -2,7 +2,7 @@
 
 - Status: draft
 - Maintainer: owner · Updated: 2026-11-04
-- Open decisions for the owner: see the status line of [ADR 0001](../adr/0001-agent-access-through-mcp.md).
+- Decided by the owner: direct shared domain functions for the UI and MCP, no internal REST layer for now ([ADR 0001](../adr/0001-agent-access-through-mcp.md)); a write-only suggestion box for friction reports (C-9).
 - Decisions: [agent access](../adr/0001-agent-access-through-mcp.md), [private deployment](../adr/0002-private-deployment.md), [backlog stays authoritative during transition](../adr/0003-backlog-authoritative-during-transition.md), [workflow rules as templates and settings](../adr/0004-workflow-rules-in-templates.md)
 
 ## Problem and why now
@@ -45,10 +45,10 @@ by default and ADR 0004 lists every allowed move. Queued order is the owner's
 priority order. Waiting on owner cards mirror questions the supervisor agent asked
 the owner in chat.
 
-## Friction loop
+## Suggestion box
 
 Agents file friction (a confusing or missing tool, or anything else the server cannot
-see) onto a Friction list on Cardigan's own board; failed calls are already recorded
+see) into a Suggestion box list on Cardigan's own board; failed calls are already recorded
 (C-5). A new occurrence adds a comment to the same card. Triage into proposals is the
 PM agent's practice, outside Cardigan; the owner decides what is queued.
 
@@ -93,9 +93,9 @@ criterion becomes a test except deployment checks, which are recorded by hand.
   its notice come from its template, are shown in workspace settings, and are
   enforced for every actor in the UI and MCP. On a plain-template board any member
   or agent may create in and move cards to any list.
-- **C-9 Friction reports:** as a narrow, write-only exception to C-1 (pending the
-  owner's confirmation), any token can file a report onto Cardigan's Friction list
-  and learns only whether it was new or a repeat. Resubmitting a report key changes
+- **C-9 Suggestion box:** as a narrow, write-only exception to C-1, any product
+  workspace's agent token can file a friction report into Cardigan's Suggestion box
+  list and learns only whether it was new or a repeat; it cannot read there. Resubmitting a report key changes
   nothing; reports beyond ADR 0001's size, field and rate limits are refused.
 - **C-10 Private mode:** with private mode on and no Stripe or Unsplash keys, the
   app builds and runs; no billing page, upgrade prompt or board cap appears, Stripe
@@ -109,8 +109,8 @@ criterion becomes a test except deployment checks, which are recorded by hand.
 
 - **P-1 Setup:** a board from the product template has the five lists, the Declined
   label, the PM and supervisor roles and the ADR 0004 rules, all shown as settings;
-  a workspace has at most one product board. Cardigan's board also has the Friction
-  list.
+  a workspace has at most one product board. Cardigan's board also has the
+  Suggestion box list.
 - **P-2 Approval:** only the owner may create a card in, move a card into, reorder,
   or edit a card in Queued or In flight. A card reaches In flight only from Queued;
   no agent can create a card in In flight or Done. Denied attempts change no card or

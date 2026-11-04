@@ -1,8 +1,7 @@
 # Agents act through an MCP server over a shared domain layer
 
-Status: proposed. Pending the owner's confirmation: (1) in-process calls instead of
-an internal REST layer; (2) the write-only friction exception, or reporter tokens in
-Cardigan's workspace instead (see Alternatives).
+Status: accepted. The owner decided both open points: direct shared domain
+functions with no internal REST layer for now, and the write-only suggestion box.
 
 ## Context
 
@@ -60,11 +59,12 @@ The entry points call the domain functions directly:
   provenance (creating actor, surface, external key, source reference). Marking a
   duplicate is a comment that references the canonical card; no link table.
 
-This direct in-process call departs from the owner's request for an internal REST
-layer and is pending the owner's confirmation. Both entry points run in the same
+Server actions and MCP tools both call the shared domain functions directly; there
+is no internal REST layer for now. This replaces the owner's original request for
+REST underneath, and the owner confirmed it: both entry points run in the same
 process, so an internal REST layer would add routes, serialization and a second
-auth path without a separate consumer. If the owner keeps the internal REST layer,
-the MCP tools call it over the same domain functions; the rules above do not change.
+auth path without a separate consumer. One can be added later as another entry
+point over the same functions without changing the rules above.
 
 A general-purpose external API is out of scope. If one is needed later (a non-MCP
 client, a separate frontend, third-party integrations), GraphQL and REST are both
@@ -74,22 +74,23 @@ Agent tokens are random secrets with a recognizable prefix, stored only as a has
 bound to one workspace, named for one agent with one role, and checked on every
 call. The owner creates and revokes them in workspace settings.
 
-The single cross-workspace path, pending the owner's confirmation, is friction
-reporting: any token may file a report into Cardigan's own workspace and receives
-only whether it was new or a repeat. It cannot read, update or list anything there.
+The single cross-workspace path is the suggestion box: agents in any product
+workspace may file friction reports into Cardigan's own workspace and receive only
+whether a report was new or a repeat. It cannot read, update or list anything there.
 The agent sends a report key, a component and an error category from fixed lists
 set by the server, the tool name, an impact (low, medium or high) and a redacted
 description under a length limit. Each token may file a limited number per hour.
 The server computes the fingerprint from component, tool and category; this is
 deliberately coarse, so different problems with one tool may share a card and are
-split by the PM agent. A report is a card in the Friction list of Cardigan's board
+split by the PM agent. A report is a card in the Suggestion box list of Cardigan's board
 with the fingerprint as its external key; each new report key adds one comment.
 Report text is untrusted input and is readable by Cardigan workspace members.
 
-Alternatives considered: reporter tokens instead of the friction exception (each
-agent also holds a token in Cardigan's workspace with a "reporter" role limited to
-the Friction list; this removes the cross-workspace path, the friction key scope and
-the server setting, but a reporter token can read Cardigan's workspace); a local stdio MCP server talking to the database (every
+Alternatives considered: reporter tokens instead of the suggestion box (rejected
+by the owner: each agent would also hold a token in Cardigan's workspace with a
+"reporter" role, which removes the cross-workspace path but lets that token read
+Cardigan's workspace); an internal REST layer under MCP (deferred, see above); a
+local stdio MCP server talking to the database (every
 agent host would need database credentials, and authorization would live outside
 the app); Clerk-managed machine identities (deferred: they need machine-identity
 setup in Clerk, and a workspace-bound token keeps agents out of membership).
