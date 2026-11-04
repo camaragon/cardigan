@@ -63,7 +63,7 @@ PM agent's practice, outside Cardigan; the owner decides what is queued.
 
 ## Agent surface principles
 
-The MCP tools (C-2, ADR 0001) follow these principles; criteria S-1 to S-5 test
+The MCP tools (C-2, ADR 0001) follow these principles; criteria S-1 to S-6 test
 them.
 
 - **Self-describing workspace:** one describe tool returns everything an agent needs

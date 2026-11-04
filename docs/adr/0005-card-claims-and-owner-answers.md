@@ -49,7 +49,7 @@ by anyone who may edit the card. An answer is a card comment of kind `answer` th
 references the question and closes it. Only the owner may write one, and only in
 the UI; the MCP surface cannot create `answer` comments for any role. The answer
 reaches agents as a comment event in the changes query attributed to the owner.
-On the product template, Waiting on owner's notice changes from "Answer in chat"
+On the product template, the Waiting on owner list's notice changes from "Answer in chat"
 to telling the owner to answer on the card; its list rules are unchanged.
 
 Alternatives considered: claims as advisory only, enforced by agents' own
