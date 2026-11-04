@@ -7,16 +7,29 @@ is a server action that requires a Clerk `userId` and `orgId` (`actions/*/index.
 and audit entries take their actor from Clerk `currentUser()`
 (`lib/create-audit-log.ts`). Agents are not Clerk users, so they cannot call these
 actions, and nothing they did could be attributed. Card moves are not audited at all
-(`actions/update-card-order`). The owner asked whether the agent API should be
-GraphQL rather than REST; they are fluent in GraphQL, Apollo and TanStack Query.
+(`actions/update-card-order`). The owner asked for an MCP server built on one shared
+internal API, REST under the hood, and asked whether GraphQL would be better; they
+are fluent in GraphQL, Apollo and TanStack Query.
 
 ## Decision
 
 Extract a TypeScript domain layer (plain functions, one per operation) that takes
-an explicit actor: kind (person or agent), id, display name, workspace and surface
-(UI or MCP). Authorization rules live there and nowhere else: workspace scoping,
-Queue moves and ordering reserved to people, no deletes by agents, and read-only
-Waiting on owner cards. Every domain mutation writes its own attributed audit entry,
+an explicit actor: kind (owner, other person, PM agent or supervisor agent), id,
+display name, workspace and surface (UI or MCP). Authorization rules live there and
+nowhere else, so every entry point enforces them:
+
+- Every call is scoped to the actor's workspace.
+- Only the owner creates a card in, moves a card into, or reorders the Queue.
+  Other people and all agents are denied.
+- Agents never delete and never manage tokens.
+- PM agents propose, update, link duplicates and comment. Only supervisor agents
+  move queued cards to Done and upsert or resolve owner-call cards, each with a
+  source reference to the backlog task or chat answer.
+- Owner-call cards reject every other edit, move or delete from any actor.
+- Edits carry the version they were based on; a stale version is rejected rather
+  than overwriting an owner change.
+
+Every domain mutation writes its attributed audit entry in the same transaction,
 including moves with source and target list.
 
 Two front doors call the domain functions directly:
@@ -26,42 +39,51 @@ Two front doors call the domain functions directly:
 - **An MCP server** on a Streamable HTTP route inside the Next.js app (for example
   `/api/mcp`) resolves a bearer agent token to an agent actor, then calls the same
   functions. The route skips Clerk session protection in `proxy.ts` and rejects any
-  request without a valid token. Tools are task-shaped (list, search, create with
-  an external key, move, comment, changes since a cursor, report friction), not a
-  mirror of every table.
+  request without a valid token. Tools are task-shaped, as listed in PRD AC-2, not a
+  mirror of every table. Results are paginated and errors typed; each call,
+  including failures, is recorded in a tool-call log with the token id, never the
+  secret or the raw payload.
+
+This direct in-process call departs from the owner's D2 answer ("REST under the
+hood") and is pending the owner's confirmation. The reason: both front doors run in
+the same process, so an internal REST layer would add routes, serialization and a
+second auth path without a separate consumer. If the owner keeps D2, the MCP tools
+call a private internal REST layer over the same domain functions instead; the
+authorization rules above do not change.
+
+A general-purpose external API is out of scope. If one is needed later (a non-MCP
+client, a separate frontend, third-party integrations), GraphQL, which the owner
+knows well with Apollo and TanStack Query, and REST are both options to decide
+then. Neither is chosen now.
 
 Agent tokens are random secrets with a recognizable prefix, stored only as a hash,
-bound to exactly one workspace, named for one agent, and checked on every call; the
-owner creates and revokes them in workspace settings. The single cross-workspace
-write is friction reporting, which may only create a proposal on Cardigan's own
-workspace and returns nothing from it.
+bound to exactly one workspace, named for one agent with one role, and checked on
+every call. The owner creates and revokes them in workspace settings.
 
-**No public REST or GraphQL API in the first slice.** Both front doors are in the
-same process and call the domain layer directly, so a network API would add a
-schema, versioning and a second auth path without a consumer. If a general-purpose
-external API is needed later (a non-MCP client, a separate frontend, third-party
-integrations), prefer GraphQL over REST: the board, list, card and activity graph
-suits nested selections, the owner already works fluently in GraphQL with Apollo and
-TanStack Query, and it would sit over the same domain layer. Choose REST only if
-that consumer specifically needs plain HTTP caching or webhook-style endpoints.
+The single cross-workspace path, pending the owner's confirmation, is friction
+reporting: any token may write a friction report into Cardigan's own workspace and
+receives only a receipt. It cannot read, update or list anything there. Reports
+carry a retry key and a fingerprint for grouping repeats.
 
 Alternatives considered: a local stdio MCP server talking to the database (every
 agent host would need database credentials, and authorization would live outside
-the app); REST endpoints under the MCP server (an extra hop and a public interface
-with no consumer); Clerk-managed machine identities (deferred, because one
-workspace-bound, owner-revocable credential per agent is simple to own here and
-keeps agents out of workspace membership).
+the app); Clerk-managed machine identities (deferred, because one workspace-bound,
+owner-revocable credential per agent is simple to own here and keeps agents out of
+workspace membership).
 
 ## Consequences
 
-The schema gains agent tokens, card comments, a per-workspace unique external key
-on cards, a role on lists (Proposals, Queue, Done, Waiting on owner) so agents
-address lists by role rather than title, and actor kind, actor id, surface and move
-fields on audit entries. Existing audit rows become person entries. These are
-additive but data-bearing, so they wait for the migration baseline in
+The schema gains agent tokens with roles, card comments, card versions, a
+per-workspace unique external key on cards, duplicate links, a role on lists
+(Proposals, Queue, Done, Waiting on owner) so agents address lists by role rather
+than title, friction reports and groups, a tool-call log, and actor kind, actor id,
+surface and move fields on audit entries, which gain an event id for the changes
+cursor. The cursor must only advance past events whose transactions have
+committed, so a concurrent write cannot be skipped. Existing audit rows become person entries. These are additive but
+data-bearing, so they wait for the migration baseline in
 [ADR 0002](0002-private-deployment.md).
 
 Server actions become thin wrappers, so the UI and agents cannot drift on rules.
 A leaked token exposes one workspace until revoked; it can never delete data or
-change the owner's priority order. Adding GraphQL later is a new front door over
-the same functions, not a rewrite.
+change the owner's priority order. A later network API, internal or external, is a
+new front door over the same functions, not a rewrite.
