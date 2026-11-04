@@ -20,7 +20,9 @@ On product-template boards, split ownership by fact, not by product:
 - **Cardigan owns proposals and order.** Whether a proposal exists, its text and
   comments, whether the owner has queued it, and the order of Queued live only in
   Cardigan. The supervisor agent reads Queued and its order directly as
-  authoritative, and uses the changes query to learn when to re-read.
+  authoritative. It uses the changes query to learn of the owner's queue moves
+  and other actors' changes across all lists without re-listing every board, which
+  is also how approval becomes visible to agents (PRD P-5).
 - **The backlog owns execution state.** Whether queued work is in progress,
   blocked or done, and which worker holds it, live only in the supervisor's
   backlog. The supervisor agent references the Cardigan card id in its backlog task

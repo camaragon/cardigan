@@ -1,7 +1,8 @@
 # Agents act through an MCP server over a shared domain layer
 
-Status: proposed. Pending the owner's confirmation: in-process calls instead of an
-internal REST layer, and the write-only friction exception.
+Status: proposed. Pending the owner's confirmation: (1) in-process calls instead of
+an internal REST layer; (2) the write-only friction exception, or reporter tokens in
+Cardigan's workspace instead (see Alternatives).
 
 ## Context
 
@@ -12,7 +13,7 @@ mutation is a server action that requires a Clerk `userId` and `orgId`
 cannot call these actions, and nothing they did could be attributed. Card moves are
 not audited at all (`actions/update-card-order`). The owner asked for an MCP server
 built on one shared internal API with REST underneath, and asked whether GraphQL
-would be better; they are fluent in GraphQL, Apollo and TanStack Query.
+would be better.
 
 ## Decision
 
@@ -36,8 +37,8 @@ nowhere else, so every entry point enforces it:
 
 Every domain mutation writes its attributed audit entry in the same transaction,
 including moves with source and target list. A failed agent call writes one entry
-with its outcome and error type; these appear in the activity view under failed
-calls and not in the changes query. A call with an invalid or revoked token is
+with its outcome and error type; these are stored for the Success metric and left
+out of the changes query. A call with an invalid or revoked token is
 rejected before it reaches a workspace and writes no entry. The audit log is the
 only record of calls; entries hold the token id, never the secret or raw payload.
 
@@ -55,7 +56,9 @@ The entry points call the domain functions directly:
   route skips Clerk session protection in `proxy.ts` and rejects any request without
   a valid token. Tools are task-shaped (PRD C-2). Results are paginated, errors
   typed, board results omit image fields (uploaded backgrounds are stored as data
-  URLs), and get-card returns a paged slice of activity.
+  URLs), and get-card returns comments, labels, a paged slice of activity, and
+  provenance (creating actor, surface, external key, source reference). Marking a
+  duplicate is a comment that references the canonical card; no link table.
 
 This direct in-process call departs from the owner's request for an internal REST
 layer and is pending the owner's confirmation. Both entry points run in the same
@@ -80,11 +83,13 @@ description under a length limit. Each token may file a limited number per hour.
 The server computes the fingerprint from component, tool and category; this is
 deliberately coarse, so different problems with one tool may share a card and are
 split by the PM agent. A report is a card in the Friction list of Cardigan's board
-with the fingerprint as its external key; each new report key adds one comment. A
-new report on a card labelled Resolved removes the label and comments a regression.
+with the fingerprint as its external key; each new report key adds one comment.
 Report text is untrusted input and is readable by Cardigan workspace members.
 
-Alternatives considered: a local stdio MCP server talking to the database (every
+Alternatives considered: reporter tokens instead of the friction exception (each
+agent also holds a token in Cardigan's workspace with a "reporter" role limited to
+the Friction list; this removes the cross-workspace path, the friction key scope and
+the server setting, but a reporter token can read Cardigan's workspace); a local stdio MCP server talking to the database (every
 agent host would need database credentials, and authorization would live outside
 the app); Clerk-managed machine identities (deferred: they need machine-identity
 setup in Clerk, and a workspace-bound token keeps agents out of membership).
@@ -93,7 +98,7 @@ setup in Clerk, and a workspace-bound token keeps agents out of membership).
 
 The schema gains agent tokens, card comments with an optional external key, an
 integer version on cards, a per-workspace, per-scope external key on cards,
-duplicate links, and actor kind, actor id, surface, outcome and move fields on audit
+and actor kind, actor id, surface, outcome and move fields on audit
 entries. Audit entries gain an event id for the changes cursor, assigned in commit
 order; serializing audit inserts per workspace is acceptable for one owner and a few
 agents per workspace. Existing audit rows become person entries. ADR 0004 covers
@@ -101,6 +106,8 @@ rule settings and agent roles. These changes wait for the migration baseline in
 [ADR 0002](0002-private-deployment.md).
 
 Server actions and read routes become thin wrappers, so the UI and agents cannot
-drift on rules. A leaked token exposes one workspace until revoked; it can never
-delete data, change settings, or act beyond its role's rules. A later network API,
+drift on rules. Risks: a leaked token exposes one workspace until revoked, and can
+never delete data, change settings, or act beyond its role's rules; friction text is
+an injection or leak channel, bounded by the server limits above and by triage
+treating it as untrusted. A later network API,
 internal or external, is a new entry point over the same functions, not a rewrite.
