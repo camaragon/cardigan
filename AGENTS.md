@@ -34,7 +34,7 @@ changes or Beads issues. `.beads/issues.jsonl` (all issues closed) and
 
 - Commit messages and PR titles follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/): `type(optional scope): lowercase imperative description`, using `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`, `perf`, or `build`; mark breaking changes with `!` or a `BREAKING CHANGE:` footer.
 - Name new branches `<type>/<short-kebab-description>` using a Conventional Commits type, such as `fix/card-ordering`.
-- Never rename an open PR's head branch: GitHub closes the PR when its head branch is renamed.
+- Never rename an open PR's head branch by pushing it under a new name and deleting the old one: GitHub closes the PR.
 
 ## Pull requests
 
