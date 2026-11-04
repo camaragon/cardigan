@@ -14,20 +14,18 @@ are fluent in GraphQL, Apollo and TanStack Query.
 ## Decision
 
 Extract a TypeScript domain layer (plain functions, one per operation) that takes
-an explicit actor: kind (owner, other person, PM agent or supervisor agent), id,
-display name, workspace and surface (UI or MCP). Authorization rules live there and
-nowhere else, so every entry point enforces them:
+an explicit actor: kind (owner, other person or agent), agent role if any, id,
+display name, workspace and surface (UI or MCP). Authorization lives there and
+nowhere else, so every entry point enforces it:
 
 - Every call is scoped to the actor's workspace.
-- Only the owner creates a card in, moves a card into, or reorders the Queue.
-  Other people and all agents are denied.
-- Agents never delete and never manage tokens.
-- PM agents propose, update, link duplicates and comment. Only supervisor agents
-  move queued cards to Done and upsert or resolve owner-call cards, each with a
-  source reference to the backlog task or chat answer.
-- Owner-call cards reject every other edit, move or delete from any actor.
+- Agents never delete and never manage tokens or workspace settings.
 - Edits carry the version they were based on; a stale version is rejected rather
   than overwriting an owner change.
+- Workflow rules (who may move into or reorder a list, locked cards, what each
+  agent role may do) are read from workspace settings, not coded per workflow
+  ([ADR 0004](0004-workflow-rules-in-templates.md)). The product template's
+  owner-only Queued list and supervisor-only owner-call cards are such settings.
 
 Every domain mutation writes its attributed audit entry in the same transaction,
 including moves with source and target list.
@@ -39,7 +37,7 @@ Two front doors call the domain functions directly:
 - **An MCP server** on a Streamable HTTP route inside the Next.js app (for example
   `/api/mcp`) resolves a bearer agent token to an agent actor, then calls the same
   functions. The route skips Clerk session protection in `proxy.ts` and rejects any
-  request without a valid token. Tools are task-shaped, as listed in PRD AC-2, not a
+  request without a valid token. Tools are task-shaped, as listed in PRD C-2, not a
   mirror of every table. Results are paginated and errors typed; each call,
   including failures, is recorded in a tool-call log with the token id, never the
   secret or the raw payload.
@@ -73,17 +71,17 @@ workspace membership).
 
 ## Consequences
 
-The schema gains agent tokens with roles, card comments, card versions, a
-per-workspace unique external key on cards, duplicate links, a role on lists
-(Proposals, Queue, Done, Waiting on owner) so agents address lists by role rather
-than title, friction reports and groups, a tool-call log, and actor kind, actor id,
-surface and move fields on audit entries, which gain an event id for the changes
-cursor. The cursor must only advance past events whose transactions have
-committed, so a concurrent write cannot be skipped. Existing audit rows become person entries. These are additive but
-data-bearing, so they wait for the migration baseline in
+The schema gains agent tokens, card comments, card versions, a per-workspace
+unique external key on cards, duplicate links, friction reports and groups, a
+tool-call log, and actor kind, actor id, surface and move fields on audit entries.
+Audit entries also gain an event id for the changes cursor; the cursor only
+advances past events whose transactions have committed, so a concurrent write
+cannot be skipped. Existing audit rows become person entries. Rule settings and
+agent roles are covered in ADR 0004. These are additive but data-bearing, so they
+wait for the migration baseline in
 [ADR 0002](0002-private-deployment.md).
 
 Server actions become thin wrappers, so the UI and agents cannot drift on rules.
-A leaked token exposes one workspace until revoked; it can never delete data or
-change the owner's priority order. A later network API, internal or external, is a
+A leaked token exposes one workspace until revoked; it can never delete data,
+change workspace settings, or act beyond its role's list rules. A later network API, internal or external, is a
 new front door over the same functions, not a rewrite.
