@@ -1,6 +1,7 @@
 # Cardigan: an agent-native task board
 
-- Status: draft
+- Status: approved
+- Approval record: owner, 2026-11-04
 - Maintainer: owner · Updated: 2026-11-04
 - Decided by the owner: direct shared domain functions for the UI and MCP, no internal REST layer for now ([ADR 0001](../adr/0001-agent-access-through-mcp.md)); a write-only suggestion box for friction reports (C-9).
 - Decisions: [agent access](../adr/0001-agent-access-through-mcp.md), [private deployment](../adr/0002-private-deployment.md), [backlog stays authoritative during transition](../adr/0003-backlog-authoritative-during-transition.md), [workflow rules as templates and settings](../adr/0004-workflow-rules-in-templates.md)
