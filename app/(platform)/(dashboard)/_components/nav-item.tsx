@@ -86,7 +86,11 @@ export const NavItem = ({
       </AccordionTrigger>
       <AccordionContent className="pt-1 text-neutral-700">
         {routes
-          .filter((route) => !isPrivateMode || route.label !== "Billing")
+          .filter(
+            (route) =>
+              !isPrivateMode ||
+              route.href !== `/organization/${organization.id}/billing`,
+          )
           .map((route) => {
             return (
               <Button
