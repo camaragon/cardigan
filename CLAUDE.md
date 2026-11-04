@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Workflow
 
-**Always follow `AGENTS.md` for the development workflow.** It defines the full pipeline: planning with OpenSpec, execution with Beads (`bd`), and session management. Start every session with `bd ready`.
+**Always follow `AGENTS.md` for the development workflow.** It defines the PRD and ADR rules and the pull request workflow.
 
 ## Development Commands
 
