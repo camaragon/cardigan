@@ -13,17 +13,17 @@ A full-featured Trello-like Kanban board application built with Next.js 16. Orga
 
 ## Tech Stack
 
-| Category | Tools |
-|---|---|
-| Framework | Next.js 16 (App Router, Turbopack), TypeScript |
-| Database | PostgreSQL, Prisma ORM |
-| Authentication | Clerk (with organization support) |
-| Payments | Stripe (subscriptions, webhooks) |
-| UI | Tailwind CSS, shadcn/ui, Lucide React, next-themes |
-| State | Zustand (client), TanStack Query (server) |
-| Drag and Drop | @hello-pangea/dnd |
-| Validation | Zod |
-| Images | Unsplash API |
+| Category       | Tools                                              |
+| -------------- | -------------------------------------------------- |
+| Framework      | Next.js 16 (App Router, Turbopack), TypeScript     |
+| Database       | PostgreSQL, Prisma ORM                             |
+| Authentication | Clerk (with organization support)                  |
+| Payments       | Stripe (subscriptions, webhooks)                   |
+| UI             | Tailwind CSS, shadcn/ui, Lucide React, next-themes |
+| State          | Zustand (client), TanStack Query (server)          |
+| Drag and Drop  | @hello-pangea/dnd                                  |
+| Validation     | Zod                                                |
+| Images         | Unsplash API                                       |
 
 ## Project Structure
 
@@ -55,12 +55,13 @@ cardigan/
 - Node.js 20.9+
 - PostgreSQL database
 - Clerk account
-- Stripe account (for subscriptions)
+- Stripe account only when billing is enabled
 - Unsplash API key (optional, for board backgrounds)
 
 ### Setup
 
 1. Clone and install:
+
    ```bash
    git clone <repository-url>
    cd cardigan
@@ -68,9 +69,14 @@ cardigan/
    ```
 
 2. Create `.env.local`:
+
    ```env
+   # Private deployment (set before building; rebuild to change)
+   PRIVATE_MODE=true
+
    # Database
    DATABASE_URL="postgresql://username:password@localhost:5432/cardigan"
+   DIRECT_URL="postgresql://username:password@localhost:5432/cardigan"
 
    # Clerk
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
@@ -80,7 +86,7 @@ cardigan/
    NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
    NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
 
-   # Stripe
+   # Stripe (omit both keys in private mode)
    STRIPE_API_KEY=sk_...
    STRIPE_WEBHOOK_SECRET=whsec_...
    NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -90,12 +96,14 @@ cardigan/
    ```
 
 3. Set up the database:
+
    ```bash
    npm run schema:generate
-   npm run schema:push
+   npm run schema:deploy
    ```
 
 4. Start the dev server:
+
    ```bash
    npm run dev
    ```
@@ -104,21 +112,21 @@ cardigan/
 
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start dev server (Turbopack) |
-| `npm run build` | Production build |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Type-check with `tsc` |
-| `npm test` | Unit + integration tests (Vitest) |
-| `npm run test:unit` | Unit tests only (no database) |
+| Command                    | Description                                   |
+| -------------------------- | --------------------------------------------- |
+| `npm run dev`              | Start dev server (Turbopack)                  |
+| `npm run build`            | Production build                              |
+| `npm run start`            | Start production server                       |
+| `npm run lint`             | Run ESLint                                    |
+| `npm run typecheck`        | Type-check with `tsc`                         |
+| `npm test`                 | Unit + integration tests (Vitest)             |
+| `npm run test:unit`        | Unit tests only (no database)                 |
 | `npm run test:integration` | Integration tests (needs `TEST_DATABASE_URL`) |
-| `npm run test:e2e` | End-to-end journeys (see `e2e/README.md`) |
-| `npm run schema:generate` | Generate Prisma client |
-| `npm run schema:push` | Push schema to database |
-| `npm run schema:reset` | Reset database |
-| `npm run schema:studio` | Open Prisma Studio |
+| `npm run test:e2e`         | End-to-end journeys (see `e2e/README.md`)     |
+| `npm run schema:generate`  | Generate Prisma client                        |
+| `npm run schema:deploy`    | Apply committed migrations                    |
+| `npm run schema:reset`     | Reset database                                |
+| `npm run schema:studio`    | Open Prisma Studio                            |
 
 ## Testing
 
@@ -166,7 +174,7 @@ Clerk handles auth with `proxy.ts` (Next.js 16 convention, replaces `middleware.
 
 ## Deployment
 
-Optimized for Vercel. Connect the repository, set all environment variables from `.env.local`, and deploy. The Stripe webhook endpoint (`/api/webhook`) is configured as a public route in `proxy.ts`.
+For the private deployment, follow the [private hosting runbook](docs/private-hosting.md). Keep Clerk sign-in and workspaces enabled. `PRIVATE_MODE=true` disables billing and board limits; Stripe keys are unnecessary. Unsplash is optional in all modes, with bundled backgrounds used when unavailable. Billing code remains available when private mode is off.
 
 ## License
 

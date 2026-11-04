@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  env: {
+    PRIVATE_MODE: process.env.PRIVATE_MODE === "true" ? "true" : "false",
+  },
   images: {
     remotePatterns: [
       {

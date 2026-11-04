@@ -3,9 +3,13 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
+import { isPrivateMode } from "@/lib/private-mode";
 
 export const POST = async (req: Request) => {
+  if (isPrivateMode) return new NextResponse(null, { status: 404 });
+
+  const stripe = getStripe();
   const body = await req.text();
   const signature = (await headers()).get("Stripe-Signature") as string;
 

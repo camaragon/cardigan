@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
+import { isPrivateMode } from "@/lib/private-mode";
 import { MAX_FREE_BOARDS } from "@/constants/boards";
 
 export const incrementAvailableCount = async () => {
@@ -58,6 +59,8 @@ export const hasAvailableCount = async () => {
   if (!orgId) {
     throw new Error("Unauthorized");
   }
+
+  if (isPrivateMode) return true;
 
   const orgLimit = await db.orgLimit.findUnique({
     where: { orgId },

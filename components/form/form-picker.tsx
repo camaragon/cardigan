@@ -6,7 +6,7 @@ import { Check, Loader2, Upload } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { defaultImages } from "@/constants/images";
+import { bundledImages as defaultImages } from "@/constants/bundled-images";
 import Link from "next/link";
 import { FormErrors } from "./form-errors";
 import { Button } from "@/components/ui/button";
@@ -18,20 +18,28 @@ interface FormPickerProps {
 
 export const FormPicker = ({ id, errors }: FormPickerProps) => {
   const { pending } = useFormStatus();
-  const [images, setImages] = useState<Array<{
-    id: string;
-    urls: { thumb: string; full: string };
-    links: { html: string };
-    user: { name: string };
-  }>>([]);
+  const [images, setImages] = useState<
+    Array<{
+      id: string;
+      urls: { thumb: string; full: string };
+      links: { html: string };
+      user: { name: string };
+    }>
+  >([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(
+    defaultImages[0].id,
+  );
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchImages = async () => {
       try {
+        if (!unsplash) {
+          setImages(defaultImages);
+          return;
+        }
         const result = await unsplash.photos.getRandom({
           collectionIds: ["317099"],
           count: 9,
@@ -44,9 +52,10 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
             links: { html: string };
             user: { name: string };
           }>;
-          setImages(newImages);
+          setImages(newImages.length ? newImages : defaultImages);
+          setSelectedImageId(newImages[0]?.id ?? defaultImages[0].id);
         } else {
-          console.error("Failed to fetch images from Unsplash");
+          setImages(defaultImages);
         }
       } catch (error) {
         console.log({ error });
@@ -64,14 +73,14 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB');
+      alert("File size must be less than 5MB");
       return;
     }
 
@@ -79,7 +88,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
       setUploadedImage(dataUrl);
-      setSelectedImageId('uploaded');
+      setSelectedImageId("uploaded");
     };
     reader.readAsDataURL(file);
   };
@@ -114,7 +123,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
           className="hidden"
         />
       </div>
-      
+
       {uploadedImage && (
         <div className="mb-2">
           <div
@@ -124,7 +133,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
             )}
             onClick={() => {
               if (pending) return;
-              setSelectedImageId('uploaded');
+              setSelectedImageId("uploaded");
             }}
           >
             <input
@@ -132,7 +141,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
               type="radio"
               name={id}
               className="hidden"
-              checked={selectedImageId === 'uploaded'}
+              checked={selectedImageId === "uploaded"}
               disabled={pending}
               value={`uploaded|${uploadedImage}|${uploadedImage}||Custom Upload`}
             />
@@ -142,7 +151,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
               className="object-cover rounded-sm"
               fill
             />
-            {selectedImageId === 'uploaded' && (
+            {selectedImageId === "uploaded" && (
               <div className="absolute inset-y-0 h-full w-full bg-black/30 flex items-center justify-center">
                 <Check className="h-4 w-4 text-white" />
               </div>
@@ -153,11 +162,11 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
           </div>
         </div>
       )}
-      
+
       <div className="text-xs text-neutral-500 mb-2 text-center">
-        Or choose from Unsplash
+        Or choose a background
       </div>
-      
+
       <div className="grid grid-cols-3 gap-2 mb-2">
         {images.map((image) => (
           <div
@@ -183,7 +192,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
             />
             <Image
               src={image.urls.thumb}
-              alt="Unpslash image"
+              alt="Board background"
               className="object-cover rounded-sm"
               fill
             />

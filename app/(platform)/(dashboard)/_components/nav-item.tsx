@@ -1,5 +1,6 @@
 "use client";
 
+import { isPrivateMode } from "@/lib/private-mode";
 import {
   AccordionContent,
   AccordionItem,
@@ -84,24 +85,30 @@ export const NavItem = ({
         </div>
       </AccordionTrigger>
       <AccordionContent className="pt-1 text-neutral-700">
-        {routes.map((route) => {
-          return (
-            <Button
-              key={route.href}
-              size="sm"
-              onClick={() => onClick(route.href)}
-              className={cn(
-                "w-full font-normal justify-start pl-10 mb-1",
+        {routes
+          .filter(
+            (route) =>
+              !isPrivateMode ||
+              route.href !== `/organization/${organization.id}/billing`,
+          )
+          .map((route) => {
+            return (
+              <Button
+                key={route.href}
+                size="sm"
+                onClick={() => onClick(route.href)}
+                className={cn(
+                  "w-full font-normal justify-start pl-10 mb-1",
 
-                pathname === route.href && "bg-sky-500/10 text-sky-700",
-              )}
-              variant="ghost"
-            >
-              {route.icon}
-              {route.label}
-            </Button>
-          );
-        })}
+                  pathname === route.href && "bg-sky-500/10 text-sky-700",
+                )}
+                variant="ghost"
+              >
+                {route.icon}
+                {route.label}
+              </Button>
+            );
+          })}
       </AccordionContent>
     </AccordionItem>
   );

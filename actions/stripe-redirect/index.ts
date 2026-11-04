@@ -6,14 +6,17 @@ import { createSafeAction } from "@/lib/create-safe-action";
 import { StripeRedirect } from "./schema";
 import { absoluteUrl } from "@/lib/utils";
 import { db } from "@/lib/db";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
+import { isPrivateMode } from "@/lib/private-mode";
 import { revalidatePath } from "next/cache";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
+  if (isPrivateMode) return { error: "Billing is disabled in private mode" };
+
   const { userId, orgId } = await auth();
   const user = await currentUser();
 
-  if (!userId || !orgId || !currentUser) {
+  if (!userId || !orgId || !user) {
     return {
       error: "Unauthorized",
     };
@@ -24,6 +27,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   let url = "";
 
   try {
+    const stripe = getStripe();
     const orgSubscription = await db.orgSubscription.findUnique({
       where: {
         orgId,
