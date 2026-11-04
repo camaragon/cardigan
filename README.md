@@ -110,10 +110,35 @@ cardigan/
 | `npm run build` | Production build |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
+| `npm run typecheck` | Type-check with `tsc` |
+| `npm test` | Unit + integration tests (Vitest) |
+| `npm run test:unit` | Unit tests only (no database) |
+| `npm run test:integration` | Integration tests (needs `TEST_DATABASE_URL`) |
+| `npm run test:e2e` | End-to-end journeys (see `e2e/README.md`) |
 | `npm run schema:generate` | Generate Prisma client |
 | `npm run schema:push` | Push schema to database |
 | `npm run schema:reset` | Reset database |
 | `npm run schema:studio` | Open Prisma Studio |
+
+## Testing
+
+- **Unit tests** (`tests/unit`) need nothing and run in parallel.
+- **Integration tests** (`tests/integration`) run against a real, disposable
+  Postgres database. Set `TEST_DATABASE_URL`; its database name must contain
+  `test`, because the schema is force-reset at the start of each run. Every test
+  starts from empty tables. Clerk's `auth()` is mocked
+  (`tests/setup/mock-clerk.ts`). Without the variable these tests are skipped.
+
+  ```bash
+  createdb cardigan_test
+  TEST_DATABASE_URL=postgresql://postgres@localhost:5432/cardigan_test npm test
+  ```
+
+- **End-to-end journeys** (`e2e/`) use the open-source `e2e` framework. See
+  [`e2e/README.md`](e2e/README.md).
+
+CI (`.github/workflows/ci.yml`) runs typecheck, lint and `npm test` against a
+Postgres service on every pull request.
 
 ## Architecture
 
