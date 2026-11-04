@@ -1,6 +1,7 @@
 # Agent Instructions
 
 - Product scope lives in [the PRD](docs/product/prd.md); architecture decisions live in [docs/adr/](docs/adr/).
+- **Cardigan is a public repository and product.** Never name the owner's other products, clients, agents or private infrastructure (host names, network names) anywhere: code, docs, ADRs, commit messages, PR titles and descriptions, issues, seed data or examples. This applies even when a change serves the owner's own workflow. Use generic words instead: a product workspace, the owner, a supervisor agent, a PM agent, a private host.
 
 ## Product requirements
 

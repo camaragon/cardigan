@@ -17,8 +17,9 @@ as Supabase. Nothing in the repository shows whether that database still holds d
 
 ## Decision
 
-Serve Cardigan only on the owner's tailnet, from the owner's private host. The host
-administrator provisions a local PostgreSQL database and its credentials; the app
+Serve Cardigan only on the owner's tailnet (a private VPN network that only the
+owner's devices and agents join), from the owner's private host. The host
+administrator (whoever runs that host: the owner or someone they delegate) provisions a local PostgreSQL database and its credentials; the app
 never creates databases or roles. `DATABASE_URL` and `DIRECT_URL` both point at it.
 
 Add one private-mode setting, on for this deployment. In private mode the billing

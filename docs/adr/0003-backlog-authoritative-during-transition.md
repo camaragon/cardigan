@@ -15,7 +15,8 @@ On product-template workspaces, split ownership by fact, not by product:
 
 - **Cardigan owns proposals and order.** Whether a proposal exists, its text and
   comments, whether the owner has queued it, and the order of Queued live only in
-  Cardigan. The supervisor agent reads them through the changes query.
+  Cardigan. The supervisor agent reads Queued and its order directly as the
+  truth, and uses the changes query to learn when to re-read.
 - **The backlog owns execution state.** Whether queued work is in progress,
   blocked or done, and which worker holds it, live only in the supervisor's
   backlog. The supervisor references the Cardigan card id in its backlog task and
@@ -23,7 +24,8 @@ On product-template workspaces, split ownership by fact, not by product:
   are reflections, not the record.
 
 When the two disagree, Cardigan wins on what was asked and in what order, and the
-backlog wins on what happened. There is no automatic sync in either direction.
+backlog wins on what happened. There is no system sync in either direction; the
+supervisor mirrors execution state onto the board on a best-effort basis.
 Workspaces on the plain template are not covered: there the board is the only
 record.
 
