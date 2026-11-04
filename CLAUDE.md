@@ -17,7 +17,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - Reset database: `npm run schema:reset`
   - Open Prisma Studio: `npm run schema:studio`
 
-No test framework is configured. Prisma client is auto-generated on `npm install` via postinstall hook.
+- **Typecheck**: `npm run typecheck`
+- **Tests**: `npm test` (Vitest: unit + integration). Integration tests need `TEST_DATABASE_URL` pointing at a disposable Postgres database whose name contains `test`; they skip without it. `npm run test:unit` runs only the unit tests.
+- **E2E journeys**: `npm run test:e2e` (see `e2e/README.md`; skipped without Clerk dev-instance and model env vars)
+
+Prisma client is auto-generated on `npm install` via postinstall hook.
 
 ## Project Architecture
 

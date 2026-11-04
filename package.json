@@ -11,7 +11,13 @@
     "schema:generate": "dotenv -e .env.local -- npx prisma generate",
     "schema:push": "dotenv -e .env.local -- npx prisma db push",
     "schema:reset": "dotenv -e .env.local -- npx prisma migrate reset",
-    "schema:studio": "dotenv -e .env.local -- npx prisma studio"
+    "schema:studio": "dotenv -e .env.local -- npx prisma studio",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "e2e run --pass-with-no-tests"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.37.1",
@@ -44,18 +50,23 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@e2e-dev/web": "^0.15.4",
     "@tailwindcss/postcss": "^4",
     "@types/lodash": "^4.17.19",
     "@types/node": "^20",
     "@types/react": "19.2.10",
     "@types/react-dom": "19.2.3",
+    "ai": "^7.0.162",
     "dotenv-cli": "^8.0.0",
+    "e2e": "^0.22.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "prisma": "^6.11.1",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.2.9",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^3.2.7"
   },
   "overrides": {
     "@types/react": "19.2.10",
