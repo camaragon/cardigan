@@ -1,19 +1,27 @@
+import Link from "next/link";
+
 import { Logo } from "@/components/logo";
-import { Button } from "@/components/ui/button";
 
 export const Footer = () => {
   return (
-    <footer className="fixed bottom-0 w-full p-4 border-t bg-slate-100">
-      <div className="md:max-w-screen-2xl mx-auto flex items-center w-full justify-between">
+    <footer className="border-t border-slate-200 bg-white">
+      <div className="mx-auto flex w-full max-w-screen-2xl flex-col items-center gap-4 px-4 py-6 text-sm text-slate-600 md:flex-row md:justify-between">
         <Logo />
-        <div className="space-x-4 md:block md:w-auto flex items-center justify-between w-full">
-          <Button size="sm" variant="ghost">
-            Privacy Policy
-          </Button>
-          <Button size="sm" variant="ghost">
-            Terms of Service
-          </Button>
-        </div>
+        <p className="text-center">A task board for people and AI agents.</p>
+        <nav aria-label="Account" className="flex gap-4">
+          <Link
+            href="/sign-in"
+            className="rounded-sm hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            Log in
+          </Link>
+          <Link
+            href="/sign-up"
+            className="rounded-sm hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            Create an account
+          </Link>
+        </nav>
       </div>
     </footer>
   );
