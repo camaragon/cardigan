@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { isPrivateMode } from "@/lib/private-mode";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -9,13 +10,17 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+  if (isPrivateMode && req.nextUrl.pathname === "/api/webhook") {
+    return new NextResponse(null, { status: 404 });
+  }
+
   const { orgId, userId } = await auth();
   if (!isPublicRoute(req)) {
     await auth.protect();
   }
 
   if (userId && isPublicRoute(req)) {
-    let path = "/selct-org";
+    let path = "/select-org";
 
     if (orgId) {
       path = `/organization/${orgId}`;

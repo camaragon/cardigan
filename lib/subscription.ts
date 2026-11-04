@@ -1,9 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 
+import { isPrivateMode } from "@/lib/private-mode";
+
 const DAY_IN_MS = 86_400_000;
 
 export const checkSubscription = async () => {
+  if (isPrivateMode) return false;
+
   const { orgId } = await auth();
 
   if (!orgId) {

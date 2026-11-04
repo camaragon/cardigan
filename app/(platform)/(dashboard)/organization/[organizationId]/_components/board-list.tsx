@@ -1,3 +1,4 @@
+import { isPrivateMode } from "@/lib/private-mode";
 import { FormPopover } from "@/components/form/form-popover";
 import { Hint } from "@/components/hint";
 import { HelpCircle, User2 } from "lucide-react";
@@ -55,16 +56,18 @@ export const BoardList = async () => {
           >
             <p className="text-sm">Create new board</p>
             <span className="text-xs">
-              {isPro
+              {isPrivateMode || isPro
                 ? "Unlimited"
                 : `${MAX_FREE_BOARDS - availableCount} remaining`}
             </span>
-            <Hint
-              sideOffset={40}
-              description={`Free workspaces can have up to 5 boards. For unlimited boards upgrade this workspace.`}
-            >
-              <HelpCircle className="absolute bottom-2 right-2 h-[14px] w-[14px]" />
-            </Hint>
+            {!isPrivateMode && (
+              <Hint
+                sideOffset={40}
+                description={`Free workspaces can have up to 5 boards. For unlimited boards upgrade this workspace.`}
+              >
+                <HelpCircle className="absolute bottom-2 right-2 h-[14px] w-[14px]" />
+              </Hint>
+            )}
           </div>
         </FormPopover>
       </div>

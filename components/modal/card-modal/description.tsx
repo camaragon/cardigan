@@ -104,7 +104,7 @@ export const Description = ({ data }: DescriptionProps) => {
             role="button"
             className="min-h-[78px] max-h-[40vh] overflow-y-auto overscroll-contain bg-neutral-200 text-sm font-medium py-3 px-3.5 rounded-md whitespace-pre-wrap [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-1 [&::-webkit-scrollbar-thumb]:bg-neutral-400 [&::-webkit-scrollbar-thumb]:rounded-full"
           >
-            {data.description ?? "Add a more detailed description..."}
+            {data.description || "Add a more detailed description..."}
           </div>
         )}
       </div>

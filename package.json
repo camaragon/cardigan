@@ -9,9 +9,9 @@
     "lint": "eslint .",
     "postinstall": "npm run schema:generate",
     "schema:generate": "dotenv -e .env.local -- npx prisma generate",
-    "schema:push": "dotenv -e .env.local -- npx prisma db push",
     "schema:reset": "dotenv -e .env.local -- npx prisma migrate reset",
-    "schema:studio": "dotenv -e .env.local -- npx prisma studio"
+    "schema:studio": "dotenv -e .env.local -- npx prisma studio",
+    "schema:deploy": "dotenv -e .env.local -- npx prisma migrate deploy"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.37.1",
