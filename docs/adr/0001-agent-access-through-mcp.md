@@ -2,6 +2,8 @@
 
 Status: accepted. The owner decided both open points: direct shared domain
 functions with no internal REST layer for now, and the write-only suggestion box.
+Amended by [ADR 0005](0005-card-claims-and-owner-answers.md) for claims and
+owner answers; the source reference is now one of a card's external references.
 
 ## Context
 

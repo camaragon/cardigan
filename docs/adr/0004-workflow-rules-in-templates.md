@@ -1,6 +1,7 @@
 # Workflow rules live in workspace templates and settings
 
-Status: proposed
+Status: proposed. Amended by [ADR 0005](0005-card-claims-and-owner-answers.md):
+the claim capability, a board notice, and the Waiting on owner notice.
 
 ## Context
 
