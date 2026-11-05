@@ -8,4 +8,6 @@ export const LIMITS = {
   agentName: 80,
   page: 50,
   batch: 20,
+  frictionDescription: 2_000,
+  frictionPerHour: 10,
 } as const;

@@ -20,10 +20,12 @@ export interface KeyedWrite<T> {
   payload: unknown;
   entityType: ENTITY_TYPE;
   tokenId?: string;
+  /** Keeps the result with the key, for replays that must return it as it was. */
+  keepResult?: boolean;
   /** Performs the write and returns its result and the new entity's id. */
   write: (tx: Tx) => Promise<{ entityId: string; result: T }>;
   /** Returns the result of the earlier write that took the key. */
-  replay: (tx: Tx, entityId: string) => Promise<T>;
+  replay: (tx: Tx, entityId: string, kept: Prisma.JsonValue) => Promise<T>;
 }
 
 /**
@@ -58,7 +60,7 @@ export const keyedWrite = async <T>(
             );
           }
           return {
-            result: await input.replay(tx, existing.entityId),
+            result: await input.replay(tx, existing.entityId, existing.result),
             created: false,
           };
         }
@@ -75,6 +77,9 @@ export const keyedWrite = async <T>(
             entityType: input.entityType,
             entityId,
             tokenId: input.tokenId,
+            result: input.keepResult
+              ? (result as Prisma.InputJsonValue)
+              : undefined,
           },
         });
       }
