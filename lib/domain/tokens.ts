@@ -1,15 +1,22 @@
 import { createHash, randomBytes } from "node:crypto";
 import { ACTION, ACTOR_KIND, ENTITY_TYPE, SURFACE } from "@prisma/client";
 import { db } from "@/lib/db";
-import { Actor, isOwner } from "./actor";
+import { Actor, CAPABILITIES, isOwner } from "./actor";
 import { transaction, writeAudit } from "./audit";
 import { DomainError, notFound } from "./errors";
-import { ensureRoles } from "./boards";
-import { PLAIN_TEMPLATE } from "./templates";
-import { LIMITS, checkText } from "./limits";
 
 /** Recognizable prefix for agent token secrets. */
 export const TOKEN_PREFIX = "cdg_";
+
+/**
+ * The general agent role every workspace can use. It holds every capability
+ * and is added to the workspace the first time a token uses it.
+ */
+export const AGENT_ROLE = {
+  key: "agent",
+  name: "Agent",
+  capabilities: [...CAPABILITIES],
+};
 
 export const hashSecret = (secret: string) =>
   createHash("sha256").update(secret).digest("hex");
@@ -34,13 +41,16 @@ export const createAgentToken = async (
   input: { agentName: string; roleKey: string },
 ) => {
   requireOwnerInUi(actor);
-  checkText("agentName", input.agentName, LIMITS.agentName);
 
   const secret = `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
 
   const token = await transaction(async (tx) => {
-    if (input.roleKey === "agent") {
-      await ensureRoles(tx, actor.orgId, PLAIN_TEMPLATE);
+    if (input.roleKey === AGENT_ROLE.key) {
+      await tx.agentRole.upsert({
+        where: { orgId_key: { orgId: actor.orgId, key: AGENT_ROLE.key } },
+        update: {},
+        create: { orgId: actor.orgId, ...AGENT_ROLE },
+      });
     }
     const role = await tx.agentRole.findUnique({
       where: { orgId_key: { orgId: actor.orgId, key: input.roleKey } },

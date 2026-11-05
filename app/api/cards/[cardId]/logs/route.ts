@@ -1,20 +1,34 @@
+import { db } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
+import { OUTCOME } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { getCardActivity } from "@/lib/domain/cards";
-import { getPersonActor } from "@/lib/domain/person";
 
 export const GET = async (
   req: Request,
   { params }: { params: Promise<{ cardId: string }> },
 ) => {
   try {
-    const actor = await getPersonActor();
-    if (!actor) {
+    const { userId, orgId } = await auth();
+
+    if (!userId || !orgId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
+
     const { cardId } = await params;
-    return NextResponse.json(
-      await getCardActivity(actor, cardId, { limit: 5 }),
-    );
+
+    const auditLogs = await db.auditLog.findMany({
+      where: {
+        orgId,
+        outcome: OUTCOME.OK,
+        OR: [{ entityId: cardId }, { cardId }],
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 3,
+    });
+
+    return NextResponse.json(auditLogs);
   } catch (error) {
     console.error("[GET_CARD_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });

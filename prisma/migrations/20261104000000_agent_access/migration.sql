@@ -33,7 +33,6 @@ ALTER TYPE "ACTION" ADD VALUE 'CALL';
 
 ALTER TYPE "ENTITY_TYPE" ADD VALUE 'COMMENT';
 ALTER TYPE "ENTITY_TYPE" ADD VALUE 'AGENT_TOKEN';
-ALTER TYPE "ENTITY_TYPE" ADD VALUE 'FRICTION';
 
 -- AlterTable
 ALTER TABLE "AuditLog" ADD COLUMN     "actorKind" "ACTOR_KIND" NOT NULL DEFAULT 'MEMBER',
@@ -50,20 +49,11 @@ ADD COLUMN     "tokenId" TEXT,
 ADD COLUMN     "tool" TEXT;
 
 -- AlterTable
-ALTER TABLE "Board" ADD COLUMN     "notice" TEXT,
-ADD COLUMN     "template" TEXT NOT NULL DEFAULT 'plain';
-
--- AlterTable
 ALTER TABLE "Card" ADD COLUMN     "creatorId" TEXT,
 ADD COLUMN     "creatorKind" "ACTOR_KIND" NOT NULL DEFAULT 'MEMBER',
 ADD COLUMN     "creatorName" TEXT,
 ADD COLUMN     "creatorSurface" "SURFACE" NOT NULL DEFAULT 'UI',
 ADD COLUMN     "version" INTEGER NOT NULL DEFAULT 1;
-
--- AlterTable
-ALTER TABLE "List" ADD COLUMN     "notice" TEXT,
-ADD COLUMN     "rules" JSONB,
-ADD COLUMN     "templateKey" TEXT;
 
 -- CreateTable
 CREATE TABLE "Comment" (
@@ -94,7 +84,6 @@ CREATE TABLE "ExternalKey" (
     "entityType" "ENTITY_TYPE" NOT NULL,
     "entityId" TEXT NOT NULL,
     "tokenId" TEXT,
-    "result" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ExternalKey_pkey" PRIMARY KEY ("id")
