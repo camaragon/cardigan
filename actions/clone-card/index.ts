@@ -1,18 +1,17 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { InputType, ReturnType } from "./types";
-import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { CloneCard } from "./schema";
-import { createAuditLog } from "@/lib/create-audit-log";
-import { ACTION, ENTITY_TYPE } from "@prisma/client";
+import { copyCard } from "@/lib/domain/cards";
+import { errorMessage } from "@/lib/domain/errors";
+import { getPersonActor } from "@/lib/domain/person";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  const { userId, orgId } = await auth();
+  const actor = await getPersonActor();
 
-  if (!userId || !orgId) {
+  if (!actor) {
     return {
       error: "Unauthorized",
     };
@@ -22,63 +21,10 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   let card;
 
   try {
-    const cardToClone = await db.card.findUnique({
-      where: {
-        id,
-        list: {
-          board: {
-            orgId,
-          },
-        },
-      },
-      include: {
-        labels: true,
-      },
-    });
-
-    if (!cardToClone) {
-      return {
-        error: "Card not found",
-      };
-    }
-
-    const lastCard = await db.card.findFirst({
-      where: {
-        listId: cardToClone.listId,
-      },
-      orderBy: {
-        order: "desc",
-      },
-      select: { order: true },
-    });
-
-    const newOrder = lastCard ? lastCard.order + 1 : 1;
-
-    card = await db.card.create({
-      data: {
-        title: `${cardToClone.title} (Clone)`,
-        description: cardToClone.description,
-        order: newOrder,
-        listId: cardToClone.listId,
-        labels: {
-          createMany: {
-            data: cardToClone.labels.map((cl) => ({
-              labelId: cl.labelId,
-            })),
-          },
-        },
-      },
-    });
-
-    await createAuditLog({
-      entityTitle: card.title,
-      entityId: card.id,
-      entityType: ENTITY_TYPE.CARD,
-      action: ACTION.CREATE,
-    });
-  } catch {
+    card = await copyCard(actor, id);
+  } catch (error) {
     return {
-      error: "Failed to clone card",
+      error: errorMessage(error, "Failed to clone card"),
     };
   }
 

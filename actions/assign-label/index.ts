@@ -1,16 +1,17 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { InputType, ReturnType } from "./types";
-import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { AssignLabel } from "./schema";
+import { setCardLabel } from "@/lib/domain/cards";
+import { errorMessage } from "@/lib/domain/errors";
+import { getPersonActor } from "@/lib/domain/person";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  const { userId, orgId } = await auth();
+  const actor = await getPersonActor();
 
-  if (!userId || !orgId) {
+  if (!actor) {
     return { error: "Unauthorized" };
   }
 
@@ -18,30 +19,13 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   let cardLabel;
 
   try {
-    const label = await db.label.findUnique({
-      where: { id: labelId, orgId },
+    cardLabel = await setCardLabel(actor, {
+      cardId,
+      labelId,
+      assigned: true,
     });
-
-    if (!label) {
-      return { error: "Label not found" };
-    }
-
-    const card = await db.card.findUnique({
-      where: {
-        id: cardId,
-        list: { board: { orgId } },
-      },
-    });
-
-    if (!card) {
-      return { error: "Card not found" };
-    }
-
-    cardLabel = await db.cardLabel.create({
-      data: { cardId, labelId },
-    });
-  } catch {
-    return { error: "Failed to assign label" };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to assign label") };
   }
 
   revalidatePath(`/board/${boardId}`);

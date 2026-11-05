@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LIMITS } from "@/lib/domain/limits";
 
 export const CreateCard = z.object({
   title: z
@@ -6,8 +7,12 @@ export const CreateCard = z.object({
       required_error: "Title is required",
       invalid_type_error: "Title is required",
     })
-    .min(3, {
-      message: "Title must be at least 3 characters long",
+    .trim()
+    .min(1, {
+      message: "Title is required",
+    })
+    .max(LIMITS.title, {
+      message: `Title must be at most ${LIMITS.title} characters long`,
     }),
   boardId: z.string(),
   listId: z.string(),

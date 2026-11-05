@@ -1,50 +1,30 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { InputType, ReturnType } from "./types";
-import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { UpdateCard } from "./schema";
-import { createAuditLog } from "@/lib/create-audit-log";
-import { ACTION, ENTITY_TYPE } from "@prisma/client";
+import { updateCard as updateCardInDomain } from "@/lib/domain/cards";
+import { errorMessage } from "@/lib/domain/errors";
+import { getPersonActor } from "@/lib/domain/person";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  const { userId, orgId } = await auth();
+  const actor = await getPersonActor();
 
-  if (!userId || !orgId) {
+  if (!actor) {
     return {
       error: "Unauthorized",
     };
   }
 
-  const { id, boardId, ...values } = data;
+  const { id, boardId, title, description } = data;
   let card;
 
   try {
-    card = await db.card.update({
-      where: {
-        id,
-        list: {
-          board: {
-            orgId,
-          },
-        },
-      },
-      data: {
-        ...values,
-      },
-    });
-
-    await createAuditLog({
-      entityTitle: card.title,
-      entityId: card.id,
-      entityType: ENTITY_TYPE.CARD,
-      action: ACTION.UPDATE,
-    });
-  } catch {
+    card = await updateCardInDomain(actor, { cardId: id, title, description });
+  } catch (error) {
     return {
-      error: "Failed to update card",
+      error: errorMessage(error, "Failed to update card"),
     };
   }
 

@@ -1,18 +1,17 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { InputType, ReturnType } from "./types";
-import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { CreateCard } from "./schema";
-import { createAuditLog } from "@/lib/create-audit-log";
-import { ACTION, ENTITY_TYPE } from "@prisma/client";
+import { createCard as createCardInDomain } from "@/lib/domain/cards";
+import { errorMessage } from "@/lib/domain/errors";
+import { getPersonActor } from "@/lib/domain/person";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  const { userId, orgId } = await auth();
+  const actor = await getPersonActor();
 
-  if (!userId || !orgId) {
+  if (!actor) {
     return {
       error: "Unauthorized",
     };
@@ -22,50 +21,10 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   let card;
 
   try {
-    const list = await db.list.findUnique({
-      where: {
-        id: listId,
-        board: {
-          orgId,
-        },
-      },
-    });
-
-    if (!list) {
-      return {
-        error: "List not found",
-      };
-    }
-
-    const lastCard = await db.card.findFirst({
-      where: {
-        listId,
-      },
-      orderBy: {
-        order: "desc",
-      },
-      select: { order: true },
-    });
-
-    const newOrder = lastCard ? lastCard.order + 1 : 1;
-
-    card = await db.card.create({
-      data: {
-        title,
-        listId,
-        order: newOrder,
-      },
-    });
-
-    await createAuditLog({
-      entityId: card.id,
-      entityTitle: card.title,
-      entityType: ENTITY_TYPE.CARD,
-      action: ACTION.CREATE,
-    });
-  } catch {
+    ({ card } = await createCardInDomain(actor, { listId, title }));
+  } catch (error) {
     return {
-      error: "Failed to create card",
+      error: errorMessage(error, "Failed to create card"),
     };
   }
 

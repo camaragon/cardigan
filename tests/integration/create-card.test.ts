@@ -64,7 +64,7 @@ describe.skipIf(!hasTestDatabase)("createCard action (database)", async () => {
 
   it("returns field errors without touching the database", async () => {
     const ids = await seedList();
-    const result = await createCard({ ...ids, title: "x" });
+    const result = await createCard({ ...ids, title: "" });
 
     expect(result.fieldErrors?.title).toBeDefined();
     expect(await db.card.count()).toBe(0);

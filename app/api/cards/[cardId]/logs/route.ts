@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
-import { ENTITY_TYPE } from "@prisma/client";
+import { OUTCOME } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 export const GET = async (
@@ -19,8 +19,8 @@ export const GET = async (
     const auditLogs = await db.auditLog.findMany({
       where: {
         orgId,
-        entityId: cardId,
-        entityType: ENTITY_TYPE.CARD,
+        outcome: OUTCOME.OK,
+        OR: [{ entityId: cardId }, { cardId }],
       },
       orderBy: {
         createdAt: "desc",
