@@ -26,9 +26,13 @@ describe("CreateCard schema", () => {
     ]);
   });
 
-  it("rejects titles shorter than 3 characters", () => {
-    expect(fieldErrors({ ...valid, title: "ab" }).title).toEqual([
-      "Title must be at least 3 characters long",
+  it("A-3: accepts a one-character title and rejects an empty one", () => {
+    expect(CreateCard.parse({ ...valid, title: "a" }).title).toBe("a");
+    expect(fieldErrors({ ...valid, title: "" }).title).toEqual([
+      "Title is required",
+    ]);
+    expect(fieldErrors({ ...valid, title: "   " }).title).toEqual([
+      "Title is required",
     ]);
   });
 
