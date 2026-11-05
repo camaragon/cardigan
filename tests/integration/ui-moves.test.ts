@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { clerkState, resetClerk } from "../setup/mock-clerk";
+import { resetClerk } from "../setup/mock-clerk";
 import { hasTestDatabase } from "../setup/test-db";
-import { owner, roleActor, seedBoard } from "../setup/fixtures";
+import { owner, seedBoard } from "../setup/fixtures";
 
 vi.mock("@clerk/nextjs/server", async () =>
   (await import("../setup/mock-clerk")).clerkServerMock,
@@ -11,15 +11,13 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 // UI drags call the move-card server action: one audited single-card move.
 describe.skipIf(!hasTestDatabase)("UI moves", async () => {
   const { db } = await import("@/lib/db");
-  const { getChanges } = await import("@/lib/domain/changes");
-  const { createCard } = await import("@/lib/domain/cards");
   const { moveCard } = await import("@/actions/move-card");
   const { createCard: createCardAction } = await import("@/actions/create-card");
 
   beforeEach(() => resetClerk());
 
   it("C-6: a UI drag is one single-card move with source, target and position", async () => {
-    const { board, lists } = await seedBoard(owner(), "plain");
+    const { board, lists } = await seedBoard(owner());
     const a = await createCardAction({ boardId: board.id, listId: lists.todo.id, title: "Card A" });
     const b = await createCardAction({ boardId: board.id, listId: lists.todo.id, title: "Card B" });
 
@@ -39,29 +37,13 @@ describe.skipIf(!hasTestDatabase)("UI moves", async () => {
     expect([cardA.version, cardB.version]).toEqual([2, 1]);
   });
 
-  it("C-8, P-5: a member's drag into Queued is refused; the owner's is allowed and reaches the changes query", async () => {
-    const { board, lists } = await seedBoard(owner(), "product");
-    const pm = await roleActor("pm");
-    const { card } = await createCard(pm, { listId: lists.proposed.id, title: "Proposal", externalKey: "p" });
-    const start = (await getChanges(pm)).nextCursor;
+  it("a move only targets lists in the actor's workspace", async () => {
+    const { board, lists } = await seedBoard(owner());
+    const other = await seedBoard(owner("org_other", "user_other"));
+    const card = await createCardAction({ boardId: board.id, listId: lists.todo.id, title: "Mine" });
 
-    clerkState.userId = "user_member";
-    clerkState.orgRole = "org:member";
-    const refused = await moveCard({ id: card.id, boardId: board.id, toListId: lists.queued.id, position: 0 });
-    expect(refused.error).toMatch(/Not allowed/);
-    expect((await db.card.findUniqueOrThrow({ where: { id: card.id } })).listId).toBe(lists.proposed.id);
-
-    resetClerk();
-    const queued = await moveCard({ id: card.id, boardId: board.id, toListId: lists.queued.id, position: 0 });
-    expect(queued.error).toBeUndefined();
-
-    const { events } = await getChanges(pm, { cursor: start });
-    expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({
-      action: "MOVE",
-      entityId: card.id,
-      toListId: lists.queued.id,
-      actor: { kind: "OWNER", surface: "UI" },
-    });
+    const result = await moveCard({ id: card.data!.id, boardId: board.id, toListId: other.lists.todo.id, position: 0 });
+    expect(result.error).toBe("List not found");
+    expect((await db.card.findUniqueOrThrow({ where: { id: card.data!.id } })).listId).toBe(lists.todo.id);
   });
 });

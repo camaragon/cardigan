@@ -5,15 +5,31 @@ import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { CloneCard } from "./schema";
 import { copyCard } from "@/lib/domain/cards";
-import { runAsPerson } from "@/lib/domain/run-as-person";
+import { errorMessage } from "@/lib/domain/errors";
+import { getPersonActor } from "@/lib/domain/person";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
+  const actor = await getPersonActor();
+
+  if (!actor) {
+    return {
+      error: "Unauthorized",
+    };
+  }
+
   const { id, boardId } = data;
-  const result = await runAsPerson("Failed to clone card", (actor) =>
-    copyCard(actor, id),
-  );
-  if (result.data) revalidatePath(`/board/${boardId}`);
-  return result;
+  let card;
+
+  try {
+    card = await copyCard(actor, id);
+  } catch (error) {
+    return {
+      error: errorMessage(error, "Failed to clone card"),
+    };
+  }
+
+  revalidatePath(`/board/${boardId}`);
+  return { data: card };
 };
 
 export const cloneCard = createSafeAction(CloneCard, handler);
