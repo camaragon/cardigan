@@ -1,23 +1,33 @@
+import { db } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { listComments } from "@/lib/domain/comments";
-import { isDomainError } from "@/lib/domain/errors";
-import { getPersonActor } from "@/lib/domain/person";
 
 export const GET = async (
   req: Request,
   { params }: { params: Promise<{ cardId: string }> },
 ) => {
   try {
-    const actor = await getPersonActor();
-    if (!actor) {
+    const { userId, orgId } = await auth();
+
+    if (!userId || !orgId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
+
     const { cardId } = await params;
-    return NextResponse.json(await listComments(actor, cardId));
+
+    const comments = await db.comment.findMany({
+      where: {
+        orgId,
+        cardId,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    return NextResponse.json(comments);
   } catch (error) {
-    if (isDomainError(error) && error.type === "not_found") {
-      return NextResponse.json([]);
-    }
+    console.error("[GET_COMMENTS_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 };

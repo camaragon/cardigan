@@ -5,15 +5,31 @@ import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { UpdateCard } from "./schema";
 import { updateCard as updateCardInDomain } from "@/lib/domain/cards";
-import { runAsPerson } from "@/lib/domain/run-as-person";
+import { errorMessage } from "@/lib/domain/errors";
+import { getPersonActor } from "@/lib/domain/person";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
+  const actor = await getPersonActor();
+
+  if (!actor) {
+    return {
+      error: "Unauthorized",
+    };
+  }
+
   const { id, boardId, title, description } = data;
-  const result = await runAsPerson("Failed to update card", (actor) =>
-    updateCardInDomain(actor, { cardId: id, title, description }),
-  );
-  if (result.data) revalidatePath(`/board/${boardId}`);
-  return result;
+  let card;
+
+  try {
+    card = await updateCardInDomain(actor, { cardId: id, title, description });
+  } catch (error) {
+    return {
+      error: errorMessage(error, "Failed to update card"),
+    };
+  }
+
+  revalidatePath(`/board/${boardId}`);
+  return { data: card };
 };
 
 export const updateCard = createSafeAction(UpdateCard, handler);

@@ -11,9 +11,6 @@ export const generateLogMessages = (log: AuditLog) => {
       ? `revoked the agent token for ${entityTitle}`
       : `created an agent token for ${entityTitle}`;
   }
-  if (entityType === ENTITY_TYPE.FRICTION) {
-    return `filed a friction report (${entityTitle})`;
-  }
 
   switch (action) {
     case ACTION.CREATE:

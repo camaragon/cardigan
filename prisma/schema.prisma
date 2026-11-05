@@ -15,274 +15,261 @@ datasource db {
 }
 
 model Board {
-  id            String  @id @default(uuid())
-  orgId         String
-  title         String
-  imageId       String
-  imageThumbUrl String  @db.Text
-  imageFullUrl  String  @db.Text
-  imageUserName String  @db.Text
-  imageLinkHTML String  @db.Text
-  // Template the board was created from ("plain" or "product"); see ADR 0004.
-  template      String  @default("plain")
-  // Short guidance on how work flows on the board, seeded by the template.
-  notice        String? @db.Text
+	id				String @id @default(uuid())
+	orgId			String
+	title			String
+	imageId			String
+	imageThumbUrl	String @db.Text
+	imageFullUrl	String @db.Text
+	imageUserName	String @db.Text
+	imageLinkHTML	String @db.Text
 
-  lists List[]
+	lists			List[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+	createdAt		DateTime @default(now())
+	updatedAt		DateTime @updatedAt
 }
 
 model List {
-  id    String @id @default(uuid())
-  title String
-  order Int
+	id			String @id @default(uuid())
+	title		String
+	order		Int
 
-  boardId String
-  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+	boardId		String
+	board		Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
-  // Template list key (for example "queued"), used by list rules to name targets.
-  templateKey String?
-  // List rules (ListRules in lib/domain/rules.ts); null means the template default.
-  rules       Json?
-  notice      String? @db.Text
+	cards		Card[]
 
-  cards Card[]
+	createdAt	DateTime @default(now())
+	updatedAt	DateTime @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([boardId])
+	@@index([boardId])
 }
 
 model Card {
-  id          String  @id @default(uuid())
-  title       String
-  order       Int
-  description String? @db.Text
+	id			String @id @default(uuid())
+	title		String
+	order		Int
+	description	String? @db.Text
 
-  listId String
-  list   List   @relation(fields: [listId], references: [id], onDelete: Cascade)
+	listId		String
+	list		List @relation(fields: [listId], references: [id], onDelete: Cascade)
 
-  labels   CardLabel[]
-  comments Comment[]
+	labels		CardLabel[]
+	comments	Comment[]
 
-  // Bumped on every change to the card's own fields or list, not its position.
-  version        Int        @default(1)
-  // Provenance: who created the card and through which surface.
-  creatorKind    ACTOR_KIND @default(MEMBER)
-  creatorId      String?
-  creatorName    String?
-  creatorSurface SURFACE    @default(UI)
+	// Bumped on every change to the card's own fields or list, not its position.
+	version			Int @default(1)
+	// Provenance: who created the card and through which surface.
+	creatorKind		ACTOR_KIND @default(MEMBER)
+	creatorId		String?
+	creatorName		String?
+	creatorSurface	SURFACE @default(UI)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+	createdAt	DateTime @default(now())
+	updatedAt	DateTime @updatedAt
 
-  @@index([listId])
+	@@index([listId])
 }
 
 enum COMMENT_KIND {
-  COMMENT
-  DUPLICATE
+	COMMENT
+	DUPLICATE
 }
 
 model Comment {
-  id    String       @id @default(uuid())
-  orgId String
-  body  String       @db.Text
-  kind  COMMENT_KIND @default(COMMENT)
+	id					String @id @default(uuid())
+	orgId				String
+	body				String @db.Text
+	kind				COMMENT_KIND @default(COMMENT)
 
-  cardId            String
-  card              Card    @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  // For DUPLICATE comments: the canonical card this card duplicates.
-  duplicateOfCardId String?
+	cardId				String
+	card				Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+	// For DUPLICATE comments: the canonical card this card duplicates.
+	duplicateOfCardId	String?
 
-  actorKind  ACTOR_KIND
-  actorId    String
-  actorName  String
-  actorImage String?    @db.Text
-  surface    SURFACE
-  tokenId    String?
+	actorKind			ACTOR_KIND
+	actorId				String
+	actorName			String
+	actorImage			String? @db.Text
+	surface				SURFACE
+	tokenId				String?
 
-  createdAt DateTime @default(now())
+	createdAt			DateTime @default(now())
 
-  @@index([cardId])
-  @@index([orgId])
+	@@index([cardId])
+	@@index([orgId])
 }
 
 // Retry-safe external keys for creates and comments, unique per workspace and
-// key scope (an agent role key, or a fixed friction scope). See ADR 0001.
+// key scope (the agent role, or the person). See ADR 0001.
 model ExternalKey {
-  id          String      @id @default(uuid())
-  orgId       String
-  scope       String
-  key         String
-  payloadHash String
-  entityType  ENTITY_TYPE
-  entityId    String
-  tokenId     String?
-  // Stored result for keys whose replay must return the original answer.
-  result      Json?
+	id			String @id @default(uuid())
+	orgId		String
+	scope		String
+	key			String
+	payloadHash	String
+	entityType	ENTITY_TYPE
+	entityId	String
+	tokenId		String?
 
-  createdAt DateTime @default(now())
+	createdAt	DateTime @default(now())
 
-  @@unique([orgId, scope, key])
-  @@index([tokenId, scope, createdAt])
+	@@unique([orgId, scope, key])
+	@@index([tokenId, scope, createdAt])
 }
 
 model AgentRole {
-  id           String   @id @default(uuid())
-  orgId        String
-  key          String
-  name         String
-  capabilities String[]
+	id				String @id @default(uuid())
+	orgId			String
+	key				String
+	name			String
+	capabilities	String[]
 
-  tokens AgentToken[]
+	tokens			AgentToken[]
 
-  createdAt DateTime @default(now())
+	createdAt		DateTime @default(now())
 
-  @@unique([orgId, key])
+	@@unique([orgId, key])
 }
 
 model AgentToken {
-  id          String    @id @default(uuid())
-  orgId       String
-  agentName   String
-  roleId      String
-  role        AgentRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  // SHA-256 of the secret; the secret itself is never stored.
-  secretHash  String    @unique
-  // First characters of the secret, for recognising a token in the list.
-  prefix      String
-  createdById String
-  revokedAt   DateTime?
-  lastUsedAt  DateTime?
+	id			String @id @default(uuid())
+	orgId		String
+	agentName	String
+	roleId		String
+	role		AgentRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+	// SHA-256 of the secret; the secret itself is never stored.
+	secretHash	String @unique
+	// First characters of the secret, for recognising a token in the list.
+	prefix		String
+	createdById	String
+	revokedAt	DateTime?
+	lastUsedAt	DateTime?
 
-  createdAt DateTime @default(now())
+	createdAt	DateTime @default(now())
 
-  @@index([orgId])
+	@@index([orgId])
 }
 
 model Label {
-  id    String @id @default(uuid())
-  name  String
-  color String
-  orgId String
+	id			String @id @default(uuid())
+	name		String
+	color		String
+	orgId		String
 
-  cards CardLabel[]
+	cards		CardLabel[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+	createdAt	DateTime @default(now())
+	updatedAt	DateTime @updatedAt
 
-  @@index([orgId])
+	@@index([orgId])
 }
 
 model CardLabel {
-  id String @id @default(uuid())
+	id			String @id @default(uuid())
 
-  cardId String
-  card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+	cardId		String
+	card		Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
 
-  labelId String
-  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+	labelId		String
+	label		Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
+	createdAt	DateTime @default(now())
 
-  @@unique([cardId, labelId])
-  @@index([cardId])
-  @@index([labelId])
+	@@unique([cardId, labelId])
+	@@index([cardId])
+	@@index([labelId])
 }
 
 enum ACTION {
-  CREATE
-  UPDATE
-  DELETE
-  MOVE
-  COMMENT
-  REVOKE
-  CALL
+	CREATE
+	UPDATE
+	DELETE
+	MOVE
+	COMMENT
+	REVOKE
+	CALL
 }
 
 enum ENTITY_TYPE {
-  BOARD
-  LIST
-  CARD
-  LABEL
-  COMMENT
-  AGENT_TOKEN
-  FRICTION
+	BOARD
+	LIST
+	CARD
+	LABEL
+	COMMENT
+	AGENT_TOKEN
 }
 
 enum ACTOR_KIND {
-  OWNER
-  MEMBER
-  AGENT
+	OWNER
+	MEMBER
+	AGENT
 }
 
 enum SURFACE {
-  UI
-  MCP
+	UI
+	MCP
 }
 
 enum OUTCOME {
-  OK
-  FAILED
+	OK
+	FAILED
 }
 
 model AuditLog {
-  id          String      @id @default(uuid())
-  orgId       String
-  action      ACTION
-  entityId    String
-  entityType  ENTITY_TYPE
-  entityTitle String
-  userId      String
-  userImage   String      @db.Text
-  userName    String      @db.Text
+	id			String @id @default(uuid())
+	orgId		String
+	action		ACTION
+	entityId	String
+	entityType	ENTITY_TYPE
+	entityTitle String
+	userId		String
+	userImage	String @db.Text
+	userName	String @db.Text
 
-  // Attribution (ADR 0001). Existing rows are person entries made in the UI.
-  actorKind ACTOR_KIND @default(MEMBER)
-  surface   SURFACE    @default(UI)
-  tokenId   String?
-  agentRole String?
-  outcome   OUTCOME    @default(OK)
-  errorType String?
-  tool      String?
+	// Attribution (ADR 0001). Existing rows are person entries made in the UI.
+	actorKind	ACTOR_KIND @default(MEMBER)
+	surface		SURFACE @default(UI)
+	tokenId		String?
+	agentRole	String?
+	outcome		OUTCOME @default(OK)
+	errorType	String?
+	tool		String?
 
-  // Card the entry concerns (for comments and moves) and move details.
-  cardId     String?
-  fromListId String?
-  toListId   String?
-  position   Int?
+	// Card the entry concerns (for comments and moves) and move details.
+	cardId		String?
+	fromListId	String?
+	toListId	String?
+	position	Int?
 
-  // Changes cursor: per-workspace sequence assigned in commit order to
-  // successful entries. Failed calls have none and stay out of the changes query.
-  eventId Int?
+	// Changes cursor: per-workspace sequence assigned in commit order to
+	// successful entries. Failed calls have none and stay out of the changes query.
+	eventId		Int?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+	createdAt	DateTime @default(now())
+	updatedAt	DateTime @updatedAt
 
-  @@unique([orgId, eventId])
-  @@index([orgId, createdAt])
-  @@index([entityId])
+	@@unique([orgId, eventId])
+	@@index([orgId, createdAt])
+	@@index([entityId])
 }
 
 model OrgLimit {
-  id    String @id @default(uuid())
-  orgId String @unique
-  count Int    @default(0)
+	id			String @id @default(uuid())
+	orgId		String @unique
+	count		Int @default(0)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+	createdAt	DateTime @default(now())
+	updatedAt	DateTime @updatedAt
 }
 
 model OrgSubscription {
-  id    String @id @default(uuid())
-  orgId String @unique
+	id						String @id @default(uuid())
+	orgId					String @unique
 
-  stripeCustomerId       String?   @unique @map(name: "stripe_customer_id")
-  stripeSubscriptionId   String?   @unique @map(name: "stripe_subscription_id")
-  stripePriceId          String?   @map(name: "stripe_price_id")
-  stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
+	stripeCustomerId		String? @unique @map(name: "stripe_customer_id")
+	stripeSubscriptionId	String? @unique @map(name: "stripe_subscription_id")
+	stripePriceId			String? @map(name: "stripe_price_id")
+	stripeCurrentPeriodEnd	DateTime? @map(name: "stripe_current_period_end")
 }
