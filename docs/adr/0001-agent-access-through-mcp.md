@@ -4,6 +4,7 @@ Status: accepted. The owner decided both open points: direct shared domain
 functions with no internal REST layer for now, and the write-only suggestion box.
 Amended by [ADR 0005](0005-card-claims-and-owner-answers.md) for claims and
 owner answers; the source reference is now one of a card's external references.
+Amended on 2026-11-05 for how the entry points are written (see the end).
 
 ## Context
 
@@ -114,3 +115,23 @@ never delete data, change settings, or act beyond its role's rules; friction tex
 an injection or leak channel, bounded by the server limits above and by triage
 treating it as untrusted. A later network API,
 internal or external, is a new entry point over the same functions, not a rewrite.
+
+## Amendment (2026-11-05)
+
+The owner reviewed the first implementation against Cardigan's handwritten
+patterns and decided:
+
+- **Read routes keep their `auth()` shape.** The card, logs, labels and comments
+  routes check the Clerk session and `orgId` themselves and query Prisma, as on
+  `main`; there is no read rule to share, so they are not wrappers over domain
+  reads. Only get-card and the other agent reads are domain functions.
+- **Input rules live in the server actions' Zod schemas,** and the MCP tools build
+  their input schemas from them, so people and agents follow one set of text rules.
+  Domain functions trust input their entry point has already validated.
+- **Server actions keep the explicit handler shape:** resolve the person actor,
+  return `{ error: "Unauthorized" }` without one, call the domain function inside
+  `try/catch`, then `revalidatePath` and return `{ data }`.
+- **Cardigan keeps its own workspace-bound agent tokens** rather than Clerk API
+  keys or Clerk OAuth for MCP.
+- **The proxy does not run on `/api/mcp`:** its matcher leaves the route out, so
+  Clerk never reads an agent token as a session token.
