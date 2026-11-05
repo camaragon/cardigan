@@ -41,6 +41,11 @@ export const ListItem = ({ data, index }: ListItemProps) => {
             className="w-full rounded-md bg-[#f1f2f4] shadow-md pb-2"
           >
             <ListHeader data={data} onAddCardAction={enableEditing} />
+            {data.notice && (
+              <p className="px-[10px] pt-1 text-xs text-muted-foreground">
+                {data.notice}
+              </p>
+            )}
             <Droppable droppableId={data.id} type="card">
               {(provided) => (
                 <ol
