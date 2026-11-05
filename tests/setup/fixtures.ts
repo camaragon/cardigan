@@ -28,3 +28,21 @@ export async function seedBoard(actor: Actor, title = "Board") {
   );
   return { board, lists: { todo, doing, done } };
 }
+
+/** Creates an agent token through the owner and resolves it to an actor. */
+export async function seedAgent(
+  ownerActor: Actor,
+  roleKey: string,
+  agentName = `${roleKey} agent`,
+) {
+  const { createAgentToken, resolveAgentToken } = await import(
+    "@/lib/domain/tokens"
+  );
+  const { token, secret } = await createAgentToken(ownerActor, {
+    agentName,
+    roleKey,
+  });
+  const actor = await resolveAgentToken(secret);
+  if (!actor) throw new Error("token did not resolve");
+  return { token, secret, actor };
+}
