@@ -54,11 +54,6 @@ export async function mcpClient(secret: string) {
     "@modelcontextprotocol/sdk/client/streamableHttp.js"
   );
   const route = await import("@/app/api/mcp/route");
-  const handlers: Record<string, (req: Request) => Promise<Response>> = {
-    POST: route.POST,
-    GET: route.GET,
-    DELETE: route.DELETE,
-  };
 
   const transport = new StreamableHTTPClientTransport(
     new URL("http://localhost/api/mcp"),
@@ -66,7 +61,10 @@ export async function mcpClient(secret: string) {
       requestInit: { headers: { Authorization: `Bearer ${secret}` } },
       fetch: async (url, init) => {
         const req = new Request(url, init);
-        return handlers[req.method](req);
+        // Like Next.js, answer methods the route does not export with 405.
+        return req.method === "POST"
+          ? route.POST(req)
+          : new Response(null, { status: 405 });
       },
     },
   );

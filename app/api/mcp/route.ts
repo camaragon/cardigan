@@ -3,8 +3,6 @@ import { recordFailedCall } from "@/lib/domain/audit";
 import { resolveAgentToken } from "@/lib/domain/tokens";
 import { CallContext, createMcpServer } from "@/lib/mcp/server";
 
-export const dynamic = "force-dynamic";
-
 /**
  * The MCP endpoint (ADR 0001). Off unless MCP_ENABLED=true: ADR 0002 keeps it
  * unreachable until the app is served only on a private network. It skips
@@ -43,7 +41,7 @@ const handle = async (req: Request) => {
     });
   }
 
-  const message = req.method === "POST" ? await req.clone().json().catch(() => null) : null;
+  const message = await req.clone().json().catch(() => null);
   const tool = toolCallName(message);
 
   const context: CallContext = { failureRecorded: false };
@@ -70,6 +68,6 @@ const handle = async (req: Request) => {
   }
 };
 
+// Stateless: there are no sessions to stream (GET) or end (DELETE), so only
+// POST is exported and Next.js answers other methods with 405.
 export const POST = handle;
-export const GET = handle;
-export const DELETE = handle;
