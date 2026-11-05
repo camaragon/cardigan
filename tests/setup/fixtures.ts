@@ -46,3 +46,44 @@ export async function seedAgent(
   if (!actor) throw new Error("token did not resolve");
   return { token, secret, actor };
 }
+
+/** An MCP client talking to the real route handler in-process. */
+export async function mcpClient(secret: string) {
+  const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
+  const { StreamableHTTPClientTransport } = await import(
+    "@modelcontextprotocol/sdk/client/streamableHttp.js"
+  );
+  const route = await import("@/app/api/mcp/route");
+
+  const transport = new StreamableHTTPClientTransport(
+    new URL("http://localhost/api/mcp"),
+    {
+      requestInit: { headers: { Authorization: `Bearer ${secret}` } },
+      fetch: async (url, init) => {
+        const req = new Request(url, init);
+        // Like Next.js, answer methods the route does not export with 405.
+        return req.method === "POST"
+          ? route.POST(req)
+          : new Response(null, { status: 405 });
+      },
+    },
+  );
+  const client = new Client({ name: "test-agent", version: "1.0.0" });
+  await client.connect(transport);
+
+  /** Calls a tool and returns its parsed JSON body and error flag. */
+  const call = async (name: string, args: Record<string, unknown> = {}) => {
+    const result = await client.callTool({ name, arguments: args });
+    const content = result.content as { type: string; text: string }[];
+    const text = content[0]?.text ?? "null";
+    let body: unknown;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = { error: { type: "invalid", message: text } };
+    }
+    return { isError: Boolean(result.isError), body: body as any };
+  };
+
+  return { client, call, close: () => client.close() };
+}

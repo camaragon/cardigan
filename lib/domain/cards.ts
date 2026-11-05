@@ -4,6 +4,7 @@ import { Actor, Capability, hasCapability, keyScope } from "./actor";
 import { transaction, Tx, writeAudit } from "./audit";
 import { denied, DomainError, notFound } from "./errors";
 import { keyedWrite } from "./keys";
+import { LIMITS } from "./limits";
 
 const cardWithContext = {
   list: true,
@@ -342,3 +343,152 @@ export const setCardLabel = async (
     });
     return { cardId: card.id, labelId: label.id };
   });
+
+export type CompactCard = ReturnType<typeof compactCard>;
+
+export type BatchItemResult =
+  | { ok: true; created: boolean; card: CompactCard }
+  | { ok: false; error: { type: string; message: string } };
+
+/**
+ * Creates several cards, one transaction each, and returns one result per item
+ * in input order; a failed item does not stop the others (PRD S-4).
+ */
+export const createCards = async (
+  actor: Actor,
+  items: CreateCardInput[],
+): Promise<BatchItemResult[]> => {
+  const results: BatchItemResult[] = [];
+  for (const item of items) {
+    try {
+      const { card, created } = await createCard(actor, item);
+      results.push({ ok: true, created, card: compactCard(card) });
+    } catch (error) {
+      if (!(error instanceof DomainError)) throw error;
+      results.push({
+        ok: false,
+        error: { type: error.type, message: error.message },
+      });
+    }
+  }
+  return results;
+};
+
+/** Successful entries about one card, newest first, paged by event id. */
+const getCardActivity = async (
+  actor: Actor,
+  cardId: string,
+  options: { limit?: number; before?: number } = {},
+) =>
+  db.auditLog.findMany({
+    where: {
+      orgId: actor.orgId,
+      outcome: OUTCOME.OK,
+      OR: [{ entityId: cardId }, { cardId }],
+      ...(options.before ? { eventId: { lt: options.before } } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: Math.min(options.limit ?? 10, LIMITS.page),
+  });
+
+/**
+ * Everything about one card in one call (PRD S-3): description, labels,
+ * comments, provenance and a paged slice of activity.
+ */
+export const getCard = async (
+  actor: Actor,
+  cardId: string,
+  options: { activityLimit?: number; activityBefore?: number } = {},
+) => {
+  const card = await loadCard(db, actor, cardId);
+  const [comments, key, activity] = await Promise.all([
+    db.comment.findMany({
+      where: { cardId: card.id },
+      orderBy: { createdAt: "asc" },
+      take: LIMITS.page,
+    }),
+    db.externalKey.findFirst({
+      where: { orgId: actor.orgId, entityId: card.id, entityType: "CARD" },
+    }),
+    getCardActivity(actor, card.id, {
+      limit: options.activityLimit,
+      before: options.activityBefore,
+    }),
+  ]);
+
+  return {
+    ...compactCard(card),
+    description: card.description,
+    createdAt: card.createdAt.toISOString(),
+    provenance: {
+      creatorKind: card.creatorKind,
+      creatorName: card.creatorName,
+      surface: card.creatorSurface,
+      externalKey: key?.key ?? null,
+    },
+    comments: comments.map((c) => ({
+      id: c.id,
+      kind: c.kind,
+      body: c.body,
+      duplicateOfCardId: c.duplicateOfCardId,
+      actor: { kind: c.actorKind, name: c.actorName, surface: c.surface },
+      createdAt: c.createdAt.toISOString(),
+    })),
+    activity,
+  };
+};
+
+/** Compact, paged card list for one board or list, in board order. */
+export const listCards = async (
+  actor: Actor,
+  options: { boardId?: string; listId?: string; limit?: number; cursor?: string },
+) => {
+  const limit = Math.min(options.limit ?? LIMITS.page, LIMITS.page);
+  const offset = options.cursor ? Number(options.cursor) : 0;
+  if (!Number.isInteger(offset) || offset < 0) {
+    throw new DomainError("invalid", "cursor must be a value from nextCursor");
+  }
+  const cards = await db.card.findMany({
+    where: {
+      list: {
+        board: { orgId: actor.orgId },
+        ...(options.boardId ? { boardId: options.boardId } : {}),
+      },
+      ...(options.listId ? { listId: options.listId } : {}),
+    },
+    include: cardWithContext,
+    orderBy: [{ list: { order: "asc" } }, { order: "asc" }],
+    skip: offset,
+    take: limit + 1,
+  });
+  return {
+    cards: cards.slice(0, limit).map(compactCard),
+    nextCursor: cards.length > limit ? String(offset + limit) : null,
+  };
+};
+
+/** Searches card titles, descriptions and comments in the actor's workspace. */
+export const searchCards = async (
+  actor: Actor,
+  options: { query: string; boardId?: string; limit?: number },
+) => {
+  const limit = Math.min(options.limit ?? LIMITS.page, LIMITS.page);
+  const contains = { contains: options.query, mode: "insensitive" as const };
+  const cards = await db.card.findMany({
+    where: {
+      list: {
+        board: { orgId: actor.orgId },
+        ...(options.boardId ? { boardId: options.boardId } : {}),
+      },
+      OR: [
+        { title: contains },
+        { description: contains },
+        { comments: { some: { body: contains } } },
+      ],
+    },
+    include: cardWithContext,
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+  });
+  return { cards: cards.map(compactCard) };
+};
