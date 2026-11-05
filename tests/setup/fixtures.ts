@@ -44,3 +44,21 @@ export async function roleActor(roleKey: string, orgId = "org_test"): Promise<Ac
     role: { key: role.key, name: role.name, capabilities: role.capabilities },
   };
 }
+
+/** Creates an agent token through the owner and resolves it to an actor. */
+export async function seedAgent(
+  ownerActor: Actor,
+  roleKey: string,
+  agentName = `${roleKey} agent`,
+) {
+  const { createAgentToken, resolveAgentToken } = await import(
+    "@/lib/domain/tokens"
+  );
+  const { token, secret } = await createAgentToken(ownerActor, {
+    agentName,
+    roleKey,
+  });
+  const actor = await resolveAgentToken(secret);
+  if (!actor) throw new Error("token did not resolve");
+  return { token, secret, actor };
+}
