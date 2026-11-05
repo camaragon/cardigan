@@ -24,6 +24,15 @@ Billing code and tables remain. Board counts keep tracking usage for a later mod
 change. `NEXT_PUBLIC_UNSPLASH_ACCESS_KEY` is optional in every mode; without it the
 picker uses bundled backgrounds and board creation defaults to one.
 
+### Agent access (MCP)
+
+The MCP endpoint at `/api/mcp` ([ADR 0001](adr/0001-agent-access-through-mcp.md))
+returns 404 unless `MCP_ENABLED=true`. Turn it on only after the cutover checks
+below show the app is reachable from the private network alone: the route skips
+Clerk session protection and relies on agent tokens. The owner creates and
+revokes tokens on a workspace's Agents page; an agent sends its token as
+`Authorization: Bearer <token>` over Streamable HTTP.
+
 ```sh
 npm ci
 npm run schema:generate
