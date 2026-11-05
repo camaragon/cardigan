@@ -1,5 +1,5 @@
 export const siteConfig = {
   name: "Cardigan",
   description:
-    "Collaborate, manage projects, and reach new productivity peaks.",
+    "A task board where people and AI agents work on the same boards, under the same rules.",
 };

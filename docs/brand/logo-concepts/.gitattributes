@@ -1,0 +1,3 @@
+# Output of build.py; regenerate instead of editing by hand.
+*.svg linguist-generated
+index.html linguist-generated
