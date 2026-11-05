@@ -118,6 +118,14 @@ export const resolveAgentToken = async (
   });
   if (!token || token.revokedAt) return null;
 
+  // Coarse last-used time for the Agents page; not an audit entry.
+  if (!token.lastUsedAt || Date.now() - token.lastUsedAt.getTime() > 60_000) {
+    await db.agentToken.update({
+      where: { id: token.id },
+      data: { lastUsedAt: new Date() },
+    });
+  }
+
   return {
     kind: ACTOR_KIND.AGENT,
     id: token.id,

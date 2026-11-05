@@ -95,7 +95,6 @@ export async function mcpClient(secret: string) {
     } catch {
       body = { error: { type: "invalid", message: text } };
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { isError: Boolean(result.isError), body: body as any };
   };
 

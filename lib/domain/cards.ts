@@ -454,8 +454,13 @@ export const setCardLabel = async (
   });
 
 /** Card read used by the UI read route and the get_card tool. */
-export const getCardForUi = (actor: Actor, cardId: string) =>
-  loadCard(db, actor, cardId);
+export const getCardForUi = async (actor: Actor, cardId: string) => {
+  // Leave out the board: its image fields can hold large data URLs.
+  const { list, ...card } = await loadCard(db, actor, cardId);
+  const { board: _board, ...listOnly } = list;
+  void _board;
+  return { ...card, list: listOnly };
+};
 
 /**
  * Everything about one card in one call (PRD S-3): description, labels,

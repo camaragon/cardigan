@@ -2,6 +2,7 @@ import { AuditLog } from "@prisma/client";
 import { generateLogMessages } from "@/lib/generate-log-messages";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
+import { ActorBadge } from "@/components/actor-badge";
 
 interface ActivityItemProps {
   data: AuditLog;
@@ -18,6 +19,7 @@ export const ActivityItem = ({ data }: ActivityItemProps) => {
           <span className="font-semibold lowercase text-neutral-700">
             {data.userName}
           </span>{" "}
+          <ActorBadge kind={data.actorKind} />{" "}
           {generateLogMessages(data)}
         </p>
         <p className="text-xs text-muted-foreground">
