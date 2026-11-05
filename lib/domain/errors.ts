@@ -3,17 +3,14 @@
  * read routes, MCP tools) turns these into its own response shape.
  */
 export type DomainErrorType =
-  | "unauthorized"
   | "not_found"
   | "invalid"
   | "denied"
   | "conflict"
-  | "stale_version"
-  | "rate_limited"
-  | "unavailable";
+  | "stale_version";
 
 export interface RuleDenial {
-  /** The rule that refused the action, e.g. "list.enter" or "role.capability". */
+  /** The rule that refused the action, e.g. "role.capability". */
   rule: string;
   /** Who may perform the action, in plain words. */
   allowed: string[];
