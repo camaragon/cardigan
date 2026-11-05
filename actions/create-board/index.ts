@@ -1,20 +1,19 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { InputType, ReturnType } from "./types";
-import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { CreateBoard } from "./schema";
-import { createAuditLog } from "@/lib/create-audit-log";
-import { ACTION, ENTITY_TYPE } from "@prisma/client";
+import { createBoard as createBoardInDomain } from "@/lib/domain/boards";
+import { errorMessage } from "@/lib/domain/errors";
+import { getPersonActor } from "@/lib/domain/person";
 import { incrementAvailableCount, hasAvailableCount } from "@/lib/org-limit";
 import { checkSubscription } from "@/lib/subscription";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  const { orgId, userId } = await auth();
+  const actor = await getPersonActor();
 
-  if (!userId || !orgId) {
+  if (!actor) {
     return {
       error: "Unauthorized",
     };
@@ -30,7 +29,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     };
   }
 
-  const { title, image } = data;
+  const { title, image, template } = data;
 
   const [imageId, imageThumbUrl, imageFullUrl, imageLinkHTML, imageUserName] =
     image.split("|");
@@ -75,10 +74,10 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   let board;
 
   try {
-    board = await db.board.create({
-      data: {
-        title,
-        orgId,
+    board = await createBoardInDomain(actor, {
+      title,
+      template: template ?? "plain",
+      image: {
         imageId: finalImageId,
         imageThumbUrl: finalThumbUrl,
         imageFullUrl: finalFullUrl,
@@ -90,16 +89,9 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     if (!isPro) {
       await incrementAvailableCount();
     }
-
-    await createAuditLog({
-      entityTitle: board.title,
-      entityId: board.id,
-      entityType: ENTITY_TYPE.BOARD,
-      action: ACTION.CREATE,
-    });
-  } catch {
+  } catch (error) {
     return {
-      error: "Failed to create board",
+      error: errorMessage(error, "Failed to create board"),
     };
   }
 

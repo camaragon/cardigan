@@ -5,9 +5,10 @@ import { transaction, Tx, writeAudit } from "./audit";
 import { denied, DomainError, notFound } from "./errors";
 import { keyedWrite } from "./keys";
 import { LIMITS } from "./limits";
+import { CardOperation, checkCardOperation, roleNames } from "./rules";
 
 const cardWithContext = {
-  list: true,
+  list: { include: { board: true } },
   labels: { include: { label: true } },
 } satisfies Prisma.CardInclude;
 
@@ -32,6 +33,7 @@ export const loadCard = async (
 const loadList = async (tx: Tx | typeof db, actor: Actor, listId: string) => {
   const list = await tx.list.findFirst({
     where: { id: listId, board: { orgId: actor.orgId } },
+    include: { board: true },
   });
   if (!list) throw notFound("List");
   return list;
@@ -45,6 +47,27 @@ export const requireCapability = (actor: Actor, capability: Capability) => {
     allowed: [`agent roles with the "${capability}" capability`, "people"],
     alternative: "Comment on the card to ask someone who may do this.",
   });
+};
+
+/** Refuses an operation the actor's role or the list rules do not allow. */
+export const enforce = async (
+  tx: Tx | typeof db,
+  actor: Actor,
+  op: CardOperation,
+  boardTemplate: string,
+) => {
+  const denial = checkCardOperation(
+    actor,
+    op,
+    boardTemplate,
+    await roleNames(tx, actor.orgId),
+  );
+  if (!denial) return;
+  const where =
+    op.kind === "move"
+      ? `move cards from ${op.from.title} to ${op.to.title}`
+      : `${op.kind} cards in ${op.list.title}`;
+  throw denied(`Not allowed to ${where}`, denial);
 };
 
 /** Compact card shape for agent results (PRD S-3). */
@@ -125,7 +148,7 @@ export const createCard = async (actor: Actor, input: CreateCardInput) => {
     replay: (tx, cardId) => loadCard(tx, actor, cardId),
     write: async (tx) => {
       const list = await loadList(tx, actor, input.listId);
-      requireCapability(actor, "create");
+      await enforce(tx, actor, { kind: "create", list }, list.board.template);
 
       const card = await tx.card.create({
         data: {
@@ -171,7 +194,12 @@ export interface UpdateCardInput {
 export const updateCard = async (actor: Actor, input: UpdateCardInput) => {
   const result = await transaction(async (tx) => {
     const card = await loadCard(tx, actor, input.cardId);
-    requireCapability(actor, "update");
+    await enforce(
+      tx,
+      actor,
+      { kind: "edit", list: card.list },
+      card.list.board.template,
+    );
 
     const version = input.expectedVersion ?? card.version;
     const data: Prisma.CardUpdateManyMutationInput = {
@@ -230,12 +258,15 @@ export const moveCard = async (actor: Actor, input: MoveCardInput) => {
     if (target.boardId !== card.list.boardId) {
       throw new DomainError("invalid", "Cards move only within their board");
     }
-    requireCapability(actor, "move");
+    const sameList = target.id === card.listId;
+    const op: CardOperation = sameList
+      ? { kind: "reorder", list: card.list }
+      : { kind: "move", from: card.list, to: target };
+    await enforce(tx, actor, op, card.list.board.template);
 
     const version = input.expectedVersion ?? card.version;
     if (version !== card.version) return null;
 
-    const sameList = target.id === card.listId;
     const siblings = await tx.card.findMany({
       where: { listId: target.id, NOT: { id: card.id } },
       orderBy: { order: "asc" },
@@ -314,7 +345,12 @@ export const setCardLabel = async (
       where: { id: input.labelId, orgId: actor.orgId },
     });
     if (!label) throw notFound("Label");
-    requireCapability(actor, "update");
+    await enforce(
+      tx,
+      actor,
+      { kind: "edit", list: card.list },
+      card.list.board.template,
+    );
 
     const where = {
       cardId_labelId: { cardId: card.id, labelId: label.id },

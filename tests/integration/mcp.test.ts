@@ -155,7 +155,7 @@ describe.skipIf(!hasTestDatabase)("MCP route", async () => {
     expect(body.you).toMatchObject({ role: "Agent", kind: "AGENT" });
     expect(body.you.capabilities).toContain("move");
     expect(body.boards).toEqual([
-      {
+      expect.objectContaining({
         id: board.id,
         title: board.title,
         lists: [
@@ -163,7 +163,7 @@ describe.skipIf(!hasTestDatabase)("MCP route", async () => {
           expect.objectContaining({ title: "Doing" }),
           expect.objectContaining({ title: "Done" }),
         ],
-      },
+      }),
     ]);
     expect(body.labels.map((l: { name: string }) => l.name)).toEqual(["Bug"]);
   });

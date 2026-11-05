@@ -2,7 +2,7 @@ import { ACTION, COMMENT_KIND, ENTITY_TYPE } from "@prisma/client";
 import { db } from "@/lib/db";
 import { Actor, keyScope } from "./actor";
 import { Tx, writeAudit } from "./audit";
-import { loadCard, requireCapability } from "./cards";
+import { enforce, loadCard, requireCapability } from "./cards";
 import { DomainError } from "./errors";
 import { keyedWrite } from "./keys";
 
@@ -64,10 +64,18 @@ const keyedComment = (actor: Actor, input: CommentInput) =>
       tx.comment.findUniqueOrThrow({ where: { id: commentId } }),
     write: async (tx) => {
       const card = await loadCard(tx, actor, input.cardId);
-      requireCapability(
-        actor,
-        input.kind === COMMENT_KIND.DUPLICATE ? "duplicate" : "comment",
-      );
+      if (input.kind === COMMENT_KIND.DUPLICATE) {
+        // The duplicate must be a card the actor may edit; the canonical
+        // card may be in any list.
+        await enforce(
+          tx,
+          actor,
+          { kind: "duplicate", list: card.list },
+          card.list.board.template,
+        );
+      } else {
+        requireCapability(actor, "comment");
+      }
       const comment = await writeComment(tx, actor, card, input);
       return { entityId: comment.id, result: comment };
     },
