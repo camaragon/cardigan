@@ -18,6 +18,7 @@ import {
 import { getChanges } from "@/lib/domain/changes";
 import { addComment, markDuplicate } from "@/lib/domain/comments";
 import { isDomainError } from "@/lib/domain/errors";
+import { FrictionReport, reportFriction } from "@/lib/domain/friction";
 import { LIMITS } from "@/lib/domain/limits";
 
 const INSTRUCTIONS = `Cardigan task board. Start with describe_workspace: it returns your role, \
@@ -247,6 +248,15 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
     run("get_changes", (args: { cursor?: string; limit?: number }) =>
       getChanges(actor, args),
     ),
+  );
+
+  server.registerTool(
+    "report_friction",
+    {
+      description: `File a friction report (a confusing or missing tool, an unexpected denial, anything the server cannot see) into Cardigan's suggestion box. Write-only: the receipt says only whether it was new or a repeat. Do not include secrets; token-shaped text is redacted. At most ${LIMITS.frictionPerHour} new reports per hour.`,
+      inputSchema: FrictionReport.shape,
+    },
+    run("report_friction", (args: unknown) => reportFriction(actor, args)),
   );
 
   return server;

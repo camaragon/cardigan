@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { hasTestDatabase } from "../setup/test-db";
 import { mcpClient, owner, seedAgent, seedBoard } from "../setup/fixtures";
 
@@ -20,6 +20,10 @@ describe.skipIf(!hasTestDatabase)("MCP route", async () => {
   });
   beforeEach(() => {
     process.env.MCP_ENABLED = "true";
+  });
+  afterEach(() => {
+    delete process.env.SUGGESTION_BOX_ORG_ID;
+    delete process.env.SUGGESTION_BOX_BOARD_ID;
   });
 
   it("is off unless MCP_ENABLED is true", async () => {
@@ -108,6 +112,7 @@ describe.skipIf(!hasTestDatabase)("MCP route", async () => {
         "list_cards",
         "mark_duplicate",
         "move_card",
+        "report_friction",
         "search_cards",
         "update_card",
       ].sort(),
@@ -187,6 +192,65 @@ describe.skipIf(!hasTestDatabase)("MCP route", async () => {
     const queued = board.lists.find((l: { key: string }) => l.key === "queued");
     expect(queued.rules.create).toEqual(["the owner"]);
     expect(body.labels.map((l: { name: string }) => l.name)).toContain("Declined");
+  });
+
+  it("C-9: friction reports are write-only, retry-safe, deduplicated by fingerprint, redacted and limited", async () => {
+    // Cardigan's own workspace and board hold the suggestion box.
+    const home = await seedBoard(owner("org_cardigan", "user_home"), "product", "Cardigan");
+    process.env.SUGGESTION_BOX_ORG_ID = "org_cardigan";
+    process.env.SUGGESTION_BOX_BOARD_ID = home.board.id;
+
+    await seedBoard(owner(), "product");
+    const { secret } = await seedAgent(owner(), "pm");
+    const agent = await mcpClient(secret);
+    const report = {
+      reportKey: "r1",
+      component: "cards",
+      category: "confusing_tool",
+      tool: "move_card",
+      impact: "medium",
+      description: "Position was unclear. My key is cdg_abcdefghijklmnopqrstuvwxyz0123456789",
+    };
+
+    const first = await agent.call("report_friction", report);
+    expect(first.body).toEqual({ status: "new" });
+    const box = await db.list.findFirstOrThrow({ where: { boardId: home.board.id, templateKey: "suggestion_box" } });
+    const counts = async () => [
+      await db.card.count({ where: { listId: box.id } }),
+      await db.comment.count({ where: { orgId: "org_cardigan" } }),
+    ];
+    expect(await counts()).toEqual([1, 1]);
+
+    // Resubmitting a report key changes nothing.
+    expect((await agent.call("report_friction", report)).body).toEqual({ status: "new" });
+    expect(await counts()).toEqual([1, 1]);
+
+    // A new key with the same fingerprint is a repeat: one more comment.
+    expect((await agent.call("report_friction", { ...report, reportKey: "r2" })).body).toEqual({ status: "repeat" });
+    expect(await counts()).toEqual([1, 2]);
+
+    const comments = await db.comment.findMany({ where: { orgId: "org_cardigan" } });
+    expect(comments.every((c) => !c.body.includes("cdg_abcdef"))).toBe(true);
+    expect(comments[0].body).toContain("[redacted]");
+
+    // It cannot read there: the suggestion card is not found from the token.
+    const card = await db.card.findFirstOrThrow({ where: { listId: box.id } });
+    expect((await agent.call("get_card", { cardId: card.id })).body.error.type).toBe("not_found");
+
+    // Size and field limits.
+    expect((await agent.call("report_friction", { ...report, reportKey: "big", description: "x".repeat(5000) })).isError).toBe(true);
+    expect((await agent.call("report_friction", { ...report, reportKey: "bad", component: "secrets" })).isError).toBe(true);
+
+    // Rate limit: 10 new reports per token per hour.
+    for (let i = 3; i <= 10; i++) {
+      expect((await agent.call("report_friction", { ...report, reportKey: `r${i}` })).isError).toBe(false);
+    }
+    expect((await agent.call("report_friction", { ...report, reportKey: "r11" })).body.error.type).toBe("rate_limited");
+
+    // A workspace without a product board may not file.
+    await seedBoard(owner("org_plain", "user_plain"), "plain");
+    const plainAgent = await mcpClient((await seedAgent(owner("org_plain", "user_plain"), "agent")).secret);
+    expect((await plainAgent.call("report_friction", { ...report, reportKey: "p1" })).body.error.type).toBe("denied");
   });
 
   it("P-5: after the owner queues a proposal, get_changes returns that move attributed to the owner", async () => {
