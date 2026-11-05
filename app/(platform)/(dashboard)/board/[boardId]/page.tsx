@@ -16,11 +16,6 @@ const BoardIdPage = async ({ params }: BoardIdPageProps) => {
 
   const { boardId } = await params;
 
-  const board = await db.board.findFirst({
-    where: { id: boardId, orgId },
-    select: { notice: true },
-  });
-
   const lists = await db.list.findMany({
     where: {
       boardId: boardId,
@@ -49,11 +44,6 @@ const BoardIdPage = async ({ params }: BoardIdPageProps) => {
 
   return (
     <div className="p-4 h-full overflow-x-auto">
-      {board?.notice && (
-        <p className="mb-3 inline-block max-w-3xl rounded-md bg-black/40 px-3 py-1.5 text-xs text-white">
-          {board.notice}
-        </p>
-      )}
       <ListContainer boardId={boardId} data={lists} />
     </div>
   );

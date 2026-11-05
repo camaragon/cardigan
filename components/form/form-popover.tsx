@@ -50,7 +50,7 @@ export const FormPopover = ({
       },
       onError: (error) => {
         toast.error(error);
-        if (error.includes("limit of free boards")) proModal.onOpen();
+        proModal.onOpen();
       },
     }
   );
@@ -81,9 +81,7 @@ export const FormPopover = ({
 
     if (mode === "create") {
       const title = formData.get("title") as string;
-      const template =
-        formData.get("template") === "product" ? "product" : "plain";
-      executeCreate({ title, image, template });
+      executeCreate({ title, image });
     } else {
       if (!boardId) {
         toast.error("Board ID is required for update");
@@ -125,27 +123,6 @@ export const FormPopover = ({
                 type="text"
                 errors={fieldErrors}
               />
-            )}
-            {isCreateMode && (
-              <div className="space-y-1">
-                <label
-                  htmlFor="template"
-                  className="text-xs font-semibold text-neutral-700"
-                >
-                  Template
-                </label>
-                <select
-                  id="template"
-                  name="template"
-                  defaultValue="plain"
-                  className="block h-7 w-full rounded-md border px-2 text-sm"
-                >
-                  <option value="plain">Plain: To do, Doing, Done</option>
-                  <option value="product">
-                    Product: proposals and an owner-approved queue
-                  </option>
-                </select>
-              </div>
             )}
           </div>
           <FormSubmit className="w-full">
