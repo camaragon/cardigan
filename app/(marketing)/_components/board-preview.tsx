@@ -58,7 +58,7 @@ const ActorChip = ({ actor }: { actor: Actor }) => (
     className={cn(
       "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
       actor.kind === "agent"
-        ? "bg-fuchsia-50 text-fuchsia-800 ring-1 ring-inset ring-fuchsia-600/20"
+        ? "bg-sky-50 text-sky-800 ring-1 ring-inset ring-sky-600/20"
         : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-500/20",
     )}
   >
@@ -85,13 +85,13 @@ export const BoardPreview = () => {
       >
         <div
           aria-hidden="true"
-          className="absolute -inset-x-6 -inset-y-8 -z-10 rounded-[2rem] bg-gradient-to-br from-fuchsia-500/15 via-pink-400/10 to-amber-300/15 blur-2xl"
+          className="absolute -inset-x-6 -inset-y-8 -z-10 rounded-[2rem] bg-gradient-to-br from-sky-500/15 via-cyan-400/10 to-amber-300/15 blur-2xl"
         />
         <div
           aria-hidden="true"
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5"
         >
-          <div className="flex items-center gap-2 border-b border-slate-200 bg-gradient-to-r from-fuchsia-700 to-pink-700 px-4 py-2.5 text-white">
+          <div className="flex items-center gap-2 border-b border-slate-200 bg-gradient-to-r from-sky-700 to-cyan-700 px-4 py-2.5 text-white">
             <span className="size-2.5 rounded-full bg-white/50" />
             <span className="size-2.5 rounded-full bg-white/50" />
             <span className="size-2.5 rounded-full bg-white/50" />
@@ -125,7 +125,7 @@ export const BoardPreview = () => {
                         className={cn(
                           "rounded-lg border bg-white p-2.5 text-left shadow-xs",
                           card.highlight
-                            ? "border-fuchsia-300 ring-2 ring-fuchsia-500/20"
+                            ? "border-sky-300 ring-2 ring-sky-500/20"
                             : "border-slate-200",
                         )}
                       >
@@ -158,7 +158,7 @@ export const BoardPreview = () => {
               </p>
               <ol className="space-y-3 text-[13px] text-slate-700">
                 <li className="flex gap-2">
-                  <Bot className="mt-0.5 size-4 shrink-0 text-fuchsia-600" />
+                  <Bot className="mt-0.5 size-4 shrink-0 text-sky-600" />
                   <span>
                     <strong className="font-semibold">Build agent</strong> moved
                     “Fix flaky export job” to Doing
@@ -178,7 +178,7 @@ export const BoardPreview = () => {
                   </span>
                 </li>
                 <li className="flex gap-2">
-                  <Bot className="mt-0.5 size-4 shrink-0 text-fuchsia-600" />
+                  <Bot className="mt-0.5 size-4 shrink-0 text-sky-600" />
                   <span>
                     <strong className="font-semibold">Research agent</strong>{" "}
                     reported friction: “search can’t filter by label”

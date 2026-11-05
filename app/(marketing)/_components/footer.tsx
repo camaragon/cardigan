@@ -6,7 +6,9 @@ export const Footer = () => {
   return (
     <footer className="border-t border-slate-200 bg-white">
       <div className="mx-auto flex w-full max-w-screen-2xl flex-col items-center gap-4 px-4 py-6 text-sm text-slate-600 md:flex-row md:justify-between">
-        <Logo />
+        <div className="hidden md:block">
+          <Logo />
+        </div>
         <p className="text-center">A task board for people and AI agents.</p>
         <nav aria-label="Account" className="flex gap-4">
           <Link

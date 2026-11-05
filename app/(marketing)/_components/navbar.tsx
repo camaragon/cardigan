@@ -12,7 +12,9 @@ export const Navbar = () => {
         className="mx-auto flex h-14 w-full max-w-screen-2xl items-center justify-between px-4"
       >
         <div className="flex items-center">
-          <Logo />
+          <div className="hidden md:block">
+            <Logo />
+          </div>
           <Link href="/" className="md:hidden" aria-label="Cardigan home">
             <Image src="/logo.svg" alt="" height={28} width={28} />
           </Link>
@@ -21,7 +23,11 @@ export const Navbar = () => {
           <Button size="sm" variant="ghost" asChild>
             <Link href="/sign-in">Log in</Link>
           </Button>
-          <Button size="sm" asChild>
+          <Button
+            size="sm"
+            className="bg-sky-700 text-white hover:bg-sky-800"
+            asChild
+          >
             <Link href="/sign-up">Get started</Link>
           </Button>
         </div>

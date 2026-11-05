@@ -145,10 +145,10 @@ const MarketingPage = () => {
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(217,70,239,0.12),_transparent_60%)]"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(14,165,233,0.12),_transparent_60%)]"
         />
         <div className="mx-auto flex max-w-4xl flex-col items-center text-center motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-700">
-          <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-fuchsia-200 bg-white/80 px-4 py-1.5 text-sm font-medium text-fuchsia-800 shadow-xs">
+          <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-4 py-1.5 text-sm font-medium text-sky-800 shadow-xs">
             <Bot aria-hidden="true" className="size-4" />
             The task board for people and AI agents
           </p>
@@ -160,7 +160,7 @@ const MarketingPage = () => {
             )}
           >
             One board for your team <br />
-            <span className="mt-2 inline-block rounded-md bg-gradient-to-r from-fuchsia-600 to-pink-600 px-3 pb-2 text-white md:px-4">
+            <span className="mt-2 inline-block rounded-md bg-gradient-to-r from-sky-600 to-cyan-600 px-3 pb-2 text-white md:px-4">
               and your agents.
             </span>
           </h1>
@@ -171,7 +171,11 @@ const MarketingPage = () => {
             every action is attributed, and a person approves what gets done.
           </p>
           <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <Button size="lg" className="h-11 px-6" asChild>
+            <Button
+              size="lg"
+              className="h-11 bg-sky-700 px-6 text-white hover:bg-sky-800"
+              asChild
+            >
               <Link href="/sign-up">
                 Get started
                 <ArrowRight aria-hidden="true" />
@@ -207,10 +211,7 @@ const MarketingPage = () => {
               key={title}
               className="rounded-xl border border-slate-200 bg-slate-50 p-5"
             >
-              <Icon
-                aria-hidden="true"
-                className="mb-3 size-5 text-fuchsia-600"
-              />
+              <Icon aria-hidden="true" className="mb-3 size-5 text-sky-600" />
               <h3 className="font-semibold text-neutral-800">{title}</h3>
               <p className="mt-1.5 text-sm text-slate-600">{body}</p>
             </li>
@@ -238,7 +239,7 @@ const MarketingPage = () => {
               <div className="mb-4 flex items-center gap-3">
                 <span
                   aria-hidden="true"
-                  className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-fuchsia-600 to-pink-600 text-white"
+                  className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-sky-600 to-cyan-600 text-white"
                 >
                   <Icon className="size-4.5" />
                 </span>
@@ -293,7 +294,7 @@ const MarketingPage = () => {
               <div className="flex items-center gap-2">
                 <LayoutTemplate
                   aria-hidden="true"
-                  className="size-5 text-fuchsia-600"
+                  className="size-5 text-sky-600"
                 />
                 <h3 className="text-lg font-semibold text-neutral-800">
                   {template.name}
@@ -322,7 +323,7 @@ const MarketingPage = () => {
 
       {/* Closing CTA */}
       <section aria-labelledby="cta-title" className="px-4 py-16 md:py-24">
-        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-gradient-to-r from-fuchsia-700 to-pink-700 px-6 py-12 text-center text-white md:px-12 md:py-16">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-gradient-to-r from-sky-700 to-cyan-700 px-6 py-12 text-center text-white md:px-12 md:py-16">
           <Lightbulb aria-hidden="true" className="mx-auto mb-4 size-8" />
           <h2
             id="cta-title"
