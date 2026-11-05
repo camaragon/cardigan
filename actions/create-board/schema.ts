@@ -9,7 +9,6 @@ export const CreateBoard = z.object({
     .min(3, {
       message: "Title must be at least 3 characters long",
     }),
-  template: z.enum(["plain", "product"]).optional(),
   image: z.string({
     required_error: "Image is required",
     invalid_type_error: "Image is required",

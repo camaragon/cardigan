@@ -50,6 +50,12 @@ export const denied = (message: string, denial: RuleDenial) =>
 export const isDomainError = (error: unknown): error is DomainError =>
   error instanceof DomainError;
 
-/** Message for the UI's `{ error }` result, hiding unexpected internals. */
-export const errorMessage = (error: unknown, fallback: string) =>
-  isDomainError(error) ? error.message : fallback;
+/**
+ * Message for a server action's `{ error }` result. Domain errors are shown as
+ * they are; anything else is logged and replaced by the action's fallback.
+ */
+export const errorMessage = (error: unknown, fallback: string) => {
+  if (isDomainError(error)) return error.message;
+  console.error("[DOMAIN_ACTION_ERROR]", error);
+  return fallback;
+};

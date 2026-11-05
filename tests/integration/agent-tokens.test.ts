@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { hasTestDatabase } from "../setup/test-db";
-import { member, owner, seedAgent, seedBoard } from "../setup/fixtures";
+import { member, owner, seedAgent } from "../setup/fixtures";
 
 vi.mock("@clerk/nextjs/server", async () =>
   (await import("../setup/mock-clerk")).clerkServerMock,
@@ -12,9 +12,8 @@ describe.skipIf(!hasTestDatabase)("agent tokens", async () => {
     await import("@/lib/domain/tokens");
 
   it("C-1: the secret is returned once and stored only as a hash; creation and revocation are logged", async () => {
-    await seedBoard(owner(), "product");
-    const { token, secret, actor } = await seedAgent(owner(), "pm");
-    expect(actor).toMatchObject({ kind: "AGENT", orgId: "org_test", tokenId: token.id, role: { key: "pm" } });
+    const { token, secret, actor } = await seedAgent(owner(), "agent");
+    expect(actor).toMatchObject({ kind: "AGENT", orgId: "org_test", tokenId: token.id, role: { key: "agent" } });
 
     const stored = await db.agentToken.findUniqueOrThrow({ where: { id: token.id } });
     expect(stored.secretHash).toBe(hashSecret(secret));
@@ -30,7 +29,6 @@ describe.skipIf(!hasTestDatabase)("agent tokens", async () => {
   });
 
   it("C-1, C-4: only the owner manages tokens; members and agents cannot", async () => {
-    await seedBoard(owner(), "plain");
     await expect(createAgentToken(member(), { agentName: "x", roleKey: "agent" })).rejects.toMatchObject({ type: "denied" });
     const { actor, token } = await seedAgent(owner(), "agent");
     await expect(createAgentToken(actor, { agentName: "x", roleKey: "agent" })).rejects.toMatchObject({ type: "denied" });
@@ -38,9 +36,9 @@ describe.skipIf(!hasTestDatabase)("agent tokens", async () => {
     expect(await db.agentToken.count()).toBe(1);
   });
 
-  it("C-1: a token resolves only in its own workspace, and an unknown role is refused", async () => {
-    await expect(createAgentToken(owner(), { agentName: "x", roleKey: "pm" })).rejects.toMatchObject({ type: "not_found" });
-    await seedBoard(owner("org_other", "user_other"), "product");
-    await expect(createAgentToken(owner(), { agentName: "x", roleKey: "pm" })).rejects.toMatchObject({ type: "not_found" });
+  it("C-1: a role must belong to the token's workspace", async () => {
+    await seedAgent(owner("org_other", "user_other"), "agent");
+    await db.agentRole.updateMany({ where: { orgId: "org_other" }, data: { key: "other" } });
+    await expect(createAgentToken(owner(), { agentName: "x", roleKey: "other" })).rejects.toMatchObject({ type: "not_found" });
   });
 });

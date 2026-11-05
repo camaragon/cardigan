@@ -1,7 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { AddComment } from "@/actions/add-comment/schema";
 import { CreateCard } from "@/actions/create-card/schema";
+import { MoveCard } from "@/actions/move-card/schema";
 import { UpdateCard } from "@/actions/update-card/schema";
 import { Actor } from "@/lib/domain/actor";
 import { recordFailedCall } from "@/lib/domain/audit";
@@ -18,20 +20,20 @@ import {
 import { getChanges } from "@/lib/domain/changes";
 import { addComment, markDuplicate } from "@/lib/domain/comments";
 import { isDomainError } from "@/lib/domain/errors";
-import { FrictionReport, reportFriction } from "@/lib/domain/friction";
 import { LIMITS } from "@/lib/domain/limits";
 
 const INSTRUCTIONS = `Cardigan task board. Start with describe_workspace: it returns your role, \
-your capabilities, every board with its notice, and every list with its rules. List rules \
-decide who may create, edit, reorder and move cards; a denial names the rule, who may act, \
-and what you can do instead. Poll get_changes with the last nextCursor instead of re-listing \
+your capabilities, every board with its lists, and the labels. A denial names the rule, who \
+may act, and what you can do instead. Poll get_changes with the last nextCursor instead of re-listing \
 boards. Creates and comments take an externalKey so retries are safe. Agents cannot delete \
 anything or change settings.`;
 
+// Text rules come from the server actions' schemas, so people and agents
+// follow the same ones.
 const id = z.string().min(1).max(100);
 const externalKey = z.string().min(1).max(LIMITS.externalKey);
-const title = CreateCard.shape.title.max(LIMITS.title);
-const description = z.string().max(LIMITS.description);
+const { title, description } = UpdateCard.shape;
+const { body } = AddComment.shape;
 
 /** Tracks whether a tool handler already recorded its own failure. */
 export interface CallContext {
@@ -74,7 +76,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
     "describe_workspace",
     {
       description:
-        "Your role and capabilities, the workspace's boards with their notices, each board's lists with their rules and notices, and its labels.",
+        "Your role and capabilities, the workspace's boards with their lists, and its labels.",
       inputSchema: {},
     },
     run("describe_workspace", () => describeWorkspace(actor)),
@@ -103,7 +105,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
       description:
         "Search card titles, descriptions and comments in your workspace. Returns compact cards.",
       inputSchema: {
-        query: z.string().min(1).max(LIMITS.query),
+        query: z.string().trim().min(1).max(LIMITS.query),
         boardId: id.optional(),
         limit: z.number().int().min(1).max(LIMITS.page).optional(),
       },
@@ -136,12 +138,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
       inputSchema: {
         cards: z
           .array(
-            z.object({
-              listId: id,
-              title,
-              description: description.optional(),
-              externalKey,
-            }),
+            CreateCard.omit({ boardId: true }).extend({ description, externalKey }),
           )
           .min(1)
           .max(LIMITS.batch),
@@ -160,8 +157,8 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
       inputSchema: {
         cardId: id,
         version: z.number().int().min(1),
-        title: UpdateCard.shape.title.unwrap().max(LIMITS.title).optional(),
-        description: description.optional(),
+        title,
+        description,
       },
     },
     run("update_card", async (args: { cardId: string; version: number; title?: string; description?: string }) =>
@@ -180,11 +177,11 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
     "move_card",
     {
       description:
-        "Move one card to a list (or within its list) at a zero-based position; defaults to the end. Pass the version you read. List rules decide which moves you may make.",
+        "Move one card to a list (or within its list) at a zero-based position; defaults to the end. Pass the version you read.",
       inputSchema: {
         cardId: id,
-        toListId: id,
-        position: z.number().int().min(0).optional(),
+        toListId: MoveCard.shape.toListId,
+        position: MoveCard.shape.position.optional(),
         version: z.number().int().min(1),
       },
     },
@@ -207,7 +204,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
         "Comment on any card in your workspace. Retrying with the same externalKey and body adds nothing new.",
       inputSchema: {
         cardId: id,
-        body: z.string().min(1).max(LIMITS.comment),
+        body,
         externalKey,
       },
     },
@@ -225,7 +222,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
       inputSchema: {
         cardId: id,
         canonicalCardId: id,
-        note: z.string().max(LIMITS.comment).optional(),
+        note: body.optional(),
         externalKey,
       },
     },
@@ -248,15 +245,6 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
     run("get_changes", (args: { cursor?: string; limit?: number }) =>
       getChanges(actor, args),
     ),
-  );
-
-  server.registerTool(
-    "report_friction",
-    {
-      description: `File a friction report (a confusing or missing tool, an unexpected denial, anything the server cannot see) into Cardigan's suggestion box. Write-only: the receipt says only whether it was new or a repeat. Do not include secrets; token-shaped text is redacted. At most ${LIMITS.frictionPerHour} new reports per hour.`,
-      inputSchema: FrictionReport.shape,
-    },
-    run("report_friction", (args: unknown) => reportFriction(actor, args)),
   );
 
   return server;

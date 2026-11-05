@@ -1,28 +1,12 @@
 import { ACTION, COMMENT_KIND, ENTITY_TYPE } from "@prisma/client";
 import { db } from "@/lib/db";
 import { Actor, keyScope } from "./actor";
-import { transaction, Tx, writeAudit } from "./audit";
-import { denied, DomainError, notFound } from "./errors";
-import {
-  findExternalKey,
-  hashPayload,
-  isUniqueViolation,
-  saveExternalKey,
-} from "./keys";
-import { enforce } from "./cards";
-import { checkComment } from "./rules";
-import { LIMITS, checkText } from "./limits";
+import { Tx, writeAudit } from "./audit";
+import { loadCard, requireCapability } from "./cards";
+import { DomainError } from "./errors";
+import { keyedWrite } from "./keys";
 
-const loadCard = async (tx: Tx | typeof db, actor: Actor, cardId: string) => {
-  const card = await tx.card.findFirst({
-    where: { id: cardId, list: { board: { orgId: actor.orgId } } },
-    include: { list: { include: { board: true } } },
-  });
-  if (!card) throw notFound("Card");
-  return card;
-};
-
-interface WriteCommentInput {
+interface CommentInput {
   cardId: string;
   body: string;
   kind: COMMENT_KIND;
@@ -30,11 +14,12 @@ interface WriteCommentInput {
   externalKey?: string;
 }
 
-const writeComment = async (
+/** Writes an attributed comment and its audit entry in the caller's transaction. */
+export const writeComment = async (
   tx: Tx,
   actor: Actor,
   card: { id: string; title: string },
-  input: WriteCommentInput,
+  input: Omit<CommentInput, "cardId" | "externalKey">,
 ) => {
   const comment = await tx.comment.create({
     data: {
@@ -61,83 +46,44 @@ const writeComment = async (
   return comment;
 };
 
-/** Runs a keyed comment write: a replay with the same payload returns the original. */
-const keyedComment = async (
-  actor: Actor,
-  input: WriteCommentInput,
-  authorize: (tx: Tx, card: Awaited<ReturnType<typeof loadCard>>) => Promise<void>,
-) => {
-  const run = () =>
-    transaction(async (tx) => {
+/** A comment under an optional external key: a replay returns the original. */
+const keyedComment = (actor: Actor, input: CommentInput) =>
+  keyedWrite({
+    orgId: actor.orgId,
+    scope: keyScope(actor),
+    key: input.externalKey,
+    payload: {
+      cardId: input.cardId,
+      body: input.body,
+      kind: input.kind,
+      duplicateOfCardId: input.duplicateOfCardId ?? null,
+    },
+    entityType: ENTITY_TYPE.COMMENT,
+    tokenId: actor.tokenId,
+    replay: (tx, commentId) =>
+      tx.comment.findUniqueOrThrow({ where: { id: commentId } }),
+    write: async (tx) => {
       const card = await loadCard(tx, actor, input.cardId);
-      const scope = keyScope(actor);
-      const payloadHash = hashPayload({
-        cardId: input.cardId,
-        body: input.body,
-        kind: input.kind,
-        duplicateOfCardId: input.duplicateOfCardId ?? null,
-      });
-      if (input.externalKey) {
-        const existing = await findExternalKey(
-          tx,
-          actor.orgId,
-          scope,
-          input.externalKey,
-          payloadHash,
-        );
-        if (existing) {
-          const comment = await tx.comment.findUniqueOrThrow({
-            where: { id: existing.entityId },
-          });
-          return { comment, created: false };
-        }
-      }
-      await authorize(tx, card);
+      requireCapability(
+        actor,
+        input.kind === COMMENT_KIND.DUPLICATE ? "duplicate" : "comment",
+      );
       const comment = await writeComment(tx, actor, card, input);
-      if (input.externalKey) {
-        await saveExternalKey(tx, {
-          orgId: actor.orgId,
-          scope,
-          key: input.externalKey,
-          payloadHash,
-          entityType: ENTITY_TYPE.COMMENT,
-          entityId: comment.id,
-          tokenId: actor.tokenId,
-        });
-      }
-      return { comment, created: true };
-    });
-
-  try {
-    return await run();
-  } catch (error) {
-    if (isUniqueViolation(error)) return run();
-    throw error;
-  }
-};
+      return { entityId: comment.id, result: comment };
+    },
+  }).then(({ result, created }) => ({ comment: result, created }));
 
 /** Anyone may comment on any card in their workspace (ADR 0004). */
 export const addComment = (
   actor: Actor,
   input: { cardId: string; body: string; externalKey?: string },
-) => {
-  checkText("body", input.body, LIMITS.comment);
-  return keyedComment(
-    actor,
-    { ...input, kind: COMMENT_KIND.COMMENT },
-    async () => {
-      const denial = checkComment(actor);
-      if (denial) throw denied("Not allowed to comment", denial);
-    },
-  );
-};
+) => keyedComment(actor, { ...input, kind: COMMENT_KIND.COMMENT });
 
 /**
  * Marks a card as a duplicate of a canonical card with a comment that
- * references it; neither card is deleted (ADR 0001). The duplicate must be a
- * card the actor may edit; the canonical card may be in any list.
+ * references it; neither card is deleted (ADR 0001).
  */
-export const markDuplicate = (
+export const markDuplicate = async (
   actor: Actor,
   input: {
     cardId: string;
@@ -146,43 +92,17 @@ export const markDuplicate = (
     externalKey?: string;
   },
 ) => {
-  if (input.note) checkText("note", input.note, LIMITS.comment);
   if (input.cardId === input.canonicalCardId) {
     throw new DomainError("invalid", "A card cannot duplicate itself");
   }
-
-  return loadCard(db, actor, input.canonicalCardId).then((canonical) =>
-    keyedComment(
-      actor,
-      {
-        cardId: input.cardId,
-        body: `Duplicate of "${canonical.title}" (${canonical.id})${
-          input.note ? `: ${input.note}` : ""
-        }`,
-        kind: COMMENT_KIND.DUPLICATE,
-        duplicateOfCardId: canonical.id,
-        externalKey: input.externalKey,
-      },
-      (tx, card) =>
-        enforce(
-          tx,
-          actor,
-          { kind: "duplicate", list: card.list },
-          card.list.board.template,
-        ),
-    ),
-  );
-};
-
-export const listComments = async (actor: Actor, cardId: string) => {
-  const card = await db.card.findFirst({
-    where: { id: cardId, list: { board: { orgId: actor.orgId } } },
-    select: { id: true },
-  });
-  if (!card) throw notFound("Card");
-  return db.comment.findMany({
-    where: { cardId },
-    orderBy: { createdAt: "asc" },
-    take: LIMITS.page,
+  const canonical = await loadCard(db, actor, input.canonicalCardId);
+  return keyedComment(actor, {
+    cardId: input.cardId,
+    body: `Duplicate of "${canonical.title}" (${canonical.id})${
+      input.note ? `: ${input.note}` : ""
+    }`,
+    kind: COMMENT_KIND.DUPLICATE,
+    duplicateOfCardId: canonical.id,
+    externalKey: input.externalKey,
   });
 };
