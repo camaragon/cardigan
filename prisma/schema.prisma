@@ -56,11 +56,100 @@ model Card {
 	list		List @relation(fields: [listId], references: [id], onDelete: Cascade)
 
 	labels		CardLabel[]
+	comments	Comment[]
+
+	// Bumped on every change to the card's own fields or list, not its position.
+	version			Int @default(1)
+	// Provenance: who created the card and through which surface.
+	creatorKind		ACTOR_KIND @default(MEMBER)
+	creatorId		String?
+	creatorName		String?
+	creatorSurface	SURFACE @default(UI)
 
 	createdAt	DateTime @default(now())
 	updatedAt	DateTime @updatedAt
 
 	@@index([listId])
+}
+
+enum COMMENT_KIND {
+	COMMENT
+	DUPLICATE
+}
+
+model Comment {
+	id					String @id @default(uuid())
+	orgId				String
+	body				String @db.Text
+	kind				COMMENT_KIND @default(COMMENT)
+
+	cardId				String
+	card				Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+	// For DUPLICATE comments: the canonical card this card duplicates.
+	duplicateOfCardId	String?
+
+	actorKind			ACTOR_KIND
+	actorId				String
+	actorName			String
+	actorImage			String? @db.Text
+	surface				SURFACE
+	tokenId				String?
+
+	createdAt			DateTime @default(now())
+
+	@@index([cardId])
+	@@index([orgId])
+}
+
+// Retry-safe external keys for creates and comments, unique per workspace and
+// key scope (the agent role, or the person). See ADR 0001.
+model ExternalKey {
+	id			String @id @default(uuid())
+	orgId		String
+	scope		String
+	key			String
+	payloadHash	String
+	entityType	ENTITY_TYPE
+	entityId	String
+	tokenId		String?
+
+	createdAt	DateTime @default(now())
+
+	@@unique([orgId, scope, key])
+	@@index([tokenId, scope, createdAt])
+}
+
+model AgentRole {
+	id				String @id @default(uuid())
+	orgId			String
+	key				String
+	name			String
+	capabilities	String[]
+
+	tokens			AgentToken[]
+
+	createdAt		DateTime @default(now())
+
+	@@unique([orgId, key])
+}
+
+model AgentToken {
+	id			String @id @default(uuid())
+	orgId		String
+	agentName	String
+	roleId		String
+	role		AgentRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+	// SHA-256 of the secret; the secret itself is never stored.
+	secretHash	String @unique
+	// First characters of the secret, for recognising a token in the list.
+	prefix		String
+	createdById	String
+	revokedAt	DateTime?
+	lastUsedAt	DateTime?
+
+	createdAt	DateTime @default(now())
+
+	@@index([orgId])
 }
 
 model Label {
@@ -97,6 +186,10 @@ enum ACTION {
 	CREATE
 	UPDATE
 	DELETE
+	MOVE
+	COMMENT
+	REVOKE
+	CALL
 }
 
 enum ENTITY_TYPE {
@@ -104,6 +197,24 @@ enum ENTITY_TYPE {
 	LIST
 	CARD
 	LABEL
+	COMMENT
+	AGENT_TOKEN
+}
+
+enum ACTOR_KIND {
+	OWNER
+	MEMBER
+	AGENT
+}
+
+enum SURFACE {
+	UI
+	MCP
+}
+
+enum OUTCOME {
+	OK
+	FAILED
 }
 
 model AuditLog {
@@ -117,8 +228,31 @@ model AuditLog {
 	userImage	String @db.Text
 	userName	String @db.Text
 
+	// Attribution (ADR 0001). Existing rows are person entries made in the UI.
+	actorKind	ACTOR_KIND @default(MEMBER)
+	surface		SURFACE @default(UI)
+	tokenId		String?
+	agentRole	String?
+	outcome		OUTCOME @default(OK)
+	errorType	String?
+	tool		String?
+
+	// Card the entry concerns (for comments and moves) and move details.
+	cardId		String?
+	fromListId	String?
+	toListId	String?
+	position	Int?
+
+	// Changes cursor: per-workspace sequence assigned in commit order to
+	// successful entries. Failed calls have none and stay out of the changes query.
+	eventId		Int?
+
 	createdAt	DateTime @default(now())
 	updatedAt	DateTime @updatedAt
+
+	@@unique([orgId, eventId])
+	@@index([orgId, createdAt])
+	@@index([entityId])
 }
 
 model OrgLimit {
