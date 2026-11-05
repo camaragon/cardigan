@@ -13,7 +13,7 @@ import {
 import { useAction } from "@/hooks/use-action";
 import { updateListOrder } from "@/actions/update-list-order";
 import { toast } from "sonner";
-import { updateCardOrder } from "@/actions/update-card-order";
+import { moveCard } from "@/actions/move-card";
 
 interface ListContainerProps {
   boardId: string;
@@ -43,46 +43,27 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
     },
   });
 
-  const { execute: executeUpdateCardOrder } = useAction(updateCardOrder, {
+  const { execute: executeMoveCard } = useAction(moveCard, {
     onSuccess: () => {
-      toast.success("Card reordered");
+      toast.success("Card moved");
     },
     onError: (error) => {
+      // Refused: snap back to the order the server sent.
+      setOrderedData(data);
       toast.error(error);
     },
   });
 
-  const moveCardWithinSameList = (
-    list: ListWithCards,
+  const handleCardMove = (
     source: DraggableLocation,
     destination: DraggableLocation,
   ) => {
-    const reorderedCards = reorder(list.cards, source.index, destination.index);
-    reorderedCards.forEach((card, index) => (card.order = index));
-    list.cards = reorderedCards;
-    executeUpdateCardOrder({ boardId, cards: list.cards });
-  };
-
-  const moveCardToAnotherList = (
-    sourceList: ListWithCards,
-    destinationList: ListWithCards,
-    source: DraggableLocation,
-    destination: DraggableLocation,
-  ) => {
-    const [movedCard] = sourceList.cards.splice(source.index, 1);
-    movedCard.listId = destination.droppableId;
-    destinationList.cards.splice(destination.index, 0, movedCard);
-
-    sourceList.cards.forEach((card, index) => (card.order = index));
-    destinationList.cards.forEach((card, index) => (card.order = index));
-    executeUpdateCardOrder({ boardId, cards: destinationList.cards });
-  };
-
-  const handleCardReorder = (
-    source: DraggableLocation,
-    destination: DraggableLocation,
-  ) => {
-    const newOrderedData = [...orderedData];
+    // Copy the lists and cards before splicing so `data` keeps the server's
+    // order for a snap-back.
+    const newOrderedData = orderedData.map((list) => ({
+      ...list,
+      cards: [...list.cards],
+    }));
     const sourceList = newOrderedData.find(
       (list) => list.id === source.droppableId,
     );
@@ -92,13 +73,20 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
 
     if (!sourceList || !destinationList) return;
 
-    if (source.droppableId === destination.droppableId) {
-      moveCardWithinSameList(sourceList, source, destination);
-    } else {
-      moveCardToAnotherList(sourceList, destinationList, source, destination);
-    }
+    const [movedCard] = sourceList.cards.splice(source.index, 1);
+    destinationList.cards.splice(destination.index, 0, {
+      ...movedCard,
+      listId: destinationList.id,
+    });
 
     setOrderedData(newOrderedData);
+    // One drag is one audited single-card move (PRD C-6).
+    executeMoveCard({
+      id: movedCard.id,
+      boardId,
+      toListId: destinationList.id,
+      position: destination.index,
+    });
   };
 
   const handleListReorder = (
@@ -127,7 +115,7 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
     }
 
     if (type === "card") {
-      handleCardReorder(source, destination);
+      handleCardMove(source, destination);
     }
   };
 
