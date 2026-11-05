@@ -6,8 +6,9 @@ export const UpdateBoard = z.object({
       required_error: "Title is required",
       invalid_type_error: "Title is required",
     })
-    .min(3, {
-      message: "Title must be at least 3 characters long",
+    .trim()
+    .min(1, {
+      message: "Title is required",
     })
     .optional(),
   image: z.string().optional(),
