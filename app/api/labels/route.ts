@@ -1,21 +1,14 @@
-import { db } from "@/lib/db";
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { listLabels } from "@/lib/domain/boards";
+import { getPersonActor } from "@/lib/domain/person";
 
 export async function GET() {
   try {
-    const { userId, orgId } = await auth();
-
-    if (!userId || !orgId) {
+    const actor = await getPersonActor();
+    if (!actor) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
-
-    const labels = await db.label.findMany({
-      where: { orgId },
-      orderBy: { name: "asc" },
-    });
-
-    return NextResponse.json(labels);
+    return NextResponse.json(await listLabels(actor));
   } catch {
     return new NextResponse("Internal Error", { status: 500 });
   }

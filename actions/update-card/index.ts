@@ -1,55 +1,19 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { InputType, ReturnType } from "./types";
-import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { UpdateCard } from "./schema";
-import { createAuditLog } from "@/lib/create-audit-log";
-import { ACTION, ENTITY_TYPE } from "@prisma/client";
+import { updateCard as updateCardInDomain } from "@/lib/domain/cards";
+import { runAsPerson } from "@/lib/domain/run-as-person";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  const { userId, orgId } = await auth();
-
-  if (!userId || !orgId) {
-    return {
-      error: "Unauthorized",
-    };
-  }
-
-  const { id, boardId, ...values } = data;
-  let card;
-
-  try {
-    card = await db.card.update({
-      where: {
-        id,
-        list: {
-          board: {
-            orgId,
-          },
-        },
-      },
-      data: {
-        ...values,
-      },
-    });
-
-    await createAuditLog({
-      entityTitle: card.title,
-      entityId: card.id,
-      entityType: ENTITY_TYPE.CARD,
-      action: ACTION.UPDATE,
-    });
-  } catch {
-    return {
-      error: "Failed to update card",
-    };
-  }
-
-  revalidatePath(`/board/${boardId}`);
-  return { data: card };
+  const { id, boardId, title, description } = data;
+  const result = await runAsPerson("Failed to update card", (actor) =>
+    updateCardInDomain(actor, { cardId: id, title, description }),
+  );
+  if (result.data) revalidatePath(`/board/${boardId}`);
+  return result;
 };
 
 export const updateCard = createSafeAction(UpdateCard, handler);

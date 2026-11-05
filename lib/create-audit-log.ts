@@ -1,6 +1,6 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
-import { db } from "@/lib/db";
+import { transaction, writeAudit } from "@/lib/domain/audit";
+import { getPersonActor } from "@/lib/domain/person";
 
 interface CreateAuditLogProps {
   entityId: string;
@@ -9,32 +9,16 @@ interface CreateAuditLogProps {
   action: ACTION;
 }
 
-export const createAuditLog = async ({
-  entityId,
-  entityType,
-  entityTitle,
-  action,
-}: CreateAuditLogProps) => {
+/**
+ * Audit entry for the board, list and label actions that do not yet go through
+ * a domain function. Attributed to the signed-in person on the UI surface and
+ * given an event id like every other entry.
+ */
+export const createAuditLog = async (entry: CreateAuditLogProps) => {
   try {
-    const { orgId } = await auth();
-    const user = await currentUser();
-
-    if (!user || !orgId) {
-      throw new Error("User not found");
-    }
-
-    await db.auditLog.create({
-      data: {
-        orgId,
-        entityId,
-        entityType,
-        entityTitle,
-        action,
-        userId: user.id,
-        userImage: user?.imageUrl,
-        userName: `${user?.firstName} ${user?.lastName}`,
-      },
-    });
+    const actor = await getPersonActor();
+    if (!actor) throw new Error("User not found");
+    await transaction((tx) => writeAudit(tx, actor, entry));
   } catch (error) {
     console.log("[AUDIT_LOG_ERROR]", error);
   }
