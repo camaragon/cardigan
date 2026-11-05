@@ -2,12 +2,11 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { InputType, ReturnType } from "./types";
-import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { CreateBoard } from "./schema";
-import { createAuditLog } from "@/lib/create-audit-log";
-import { ACTION, ENTITY_TYPE } from "@prisma/client";
+import { createBoard as createBoardInDomain } from "@/lib/domain/boards";
+import { runAsPerson } from "@/lib/domain/run-as-person";
 import { incrementAvailableCount, hasAvailableCount } from "@/lib/org-limit";
 import { checkSubscription } from "@/lib/subscription";
 
@@ -30,18 +29,10 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     };
   }
 
-  const { title, image } = data;
+  const { title, image, template } = data;
 
   const [imageId, imageThumbUrl, imageFullUrl, imageLinkHTML, imageUserName] =
     image.split("|");
-
-  console.log({
-    imageId,
-    imageThumbUrl,
-    imageFullUrl,
-    imageLinkHTML,
-    imageUserName,
-  });
 
   // Handle uploaded images differently
   let finalImageId = imageId;
@@ -72,35 +63,24 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     }
   }
 
-  let board;
-
-  try {
-    board = await db.board.create({
-      data: {
-        title,
-        orgId,
+  const result = await runAsPerson("Failed to create board", (actor) =>
+    createBoardInDomain(actor, {
+      title,
+      template: template ?? "plain",
+      image: {
         imageId: finalImageId,
         imageThumbUrl: finalThumbUrl,
         imageFullUrl: finalFullUrl,
         imageUserName: finalUserName,
         imageLinkHTML: finalLinkHTML,
       },
-    });
+    }),
+  );
+  const board = result.data;
+  if (!board) return { error: result.error };
 
-    if (!isPro) {
-      await incrementAvailableCount();
-    }
-
-    await createAuditLog({
-      entityTitle: board.title,
-      entityId: board.id,
-      entityType: ENTITY_TYPE.BOARD,
-      action: ACTION.CREATE,
-    });
-  } catch {
-    return {
-      error: "Failed to create board",
-    };
+  if (!isPro) {
+    await incrementAvailableCount();
   }
 
   revalidatePath(`/board/${board.id}`);
