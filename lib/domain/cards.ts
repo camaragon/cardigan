@@ -1,24 +1,12 @@
 import { ACTION, ENTITY_TYPE, OUTCOME, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { Actor, keyScope } from "./actor";
+import { Actor, Capability, hasCapability, keyScope } from "./actor";
 import { transaction, Tx, writeAudit } from "./audit";
 import { denied, DomainError, notFound } from "./errors";
-import {
-  findExternalKey,
-  hashPayload,
-  isUniqueViolation,
-  saveExternalKey,
-} from "./keys";
-import { CardOperation, checkCardOperation } from "./rules";
-import { LIMITS, checkText } from "./limits";
-import { roleNames } from "./roles";
-
-const cardScope = (actor: Actor) => ({
-  list: { board: { orgId: actor.orgId } },
-});
+import { keyedWrite } from "./keys";
 
 const cardWithContext = {
-  list: { include: { board: true } },
+  list: true,
   labels: { include: { label: true } },
 } satisfies Prisma.CardInclude;
 
@@ -26,9 +14,14 @@ export type CardWithContext = Prisma.CardGetPayload<{
   include: typeof cardWithContext;
 }>;
 
-const loadCard = async (tx: Tx | typeof db, actor: Actor, cardId: string) => {
+/** A card in the actor's workspace, or not found. */
+export const loadCard = async (
+  tx: Tx | typeof db,
+  actor: Actor,
+  cardId: string,
+) => {
   const card = await tx.card.findFirst({
-    where: { id: cardId, ...cardScope(actor) },
+    where: { id: cardId, list: { board: { orgId: actor.orgId } } },
     include: cardWithContext,
   });
   if (!card) throw notFound("Card");
@@ -38,34 +31,22 @@ const loadCard = async (tx: Tx | typeof db, actor: Actor, cardId: string) => {
 const loadList = async (tx: Tx | typeof db, actor: Actor, listId: string) => {
   const list = await tx.list.findFirst({
     where: { id: listId, board: { orgId: actor.orgId } },
-    include: { board: true },
   });
   if (!list) throw notFound("List");
   return list;
 };
 
-/** Refuses an operation the actor's role or the list rules do not allow. */
-export const enforce = async (
-  tx: Tx | typeof db,
-  actor: Actor,
-  op: CardOperation,
-  boardTemplate: string,
-) => {
-  const denial = checkCardOperation(
-    actor,
-    op,
-    boardTemplate,
-    await roleNames(tx, actor.orgId),
-  );
-  if (!denial) return;
-  const where =
-    op.kind === "move"
-      ? `move cards from ${op.from.title} to ${op.to.title}`
-      : `${op.kind} cards in ${op.list.title}`;
-  throw denied(`Not allowed to ${where}`, denial);
+/** Refuses an action the agent's role does not include (ADR 0004). */
+export const requireCapability = (actor: Actor, capability: Capability) => {
+  if (hasCapability(actor, capability)) return;
+  throw denied(`Your role may not ${capability} cards`, {
+    rule: "role.capability",
+    allowed: [`agent roles with the "${capability}" capability`, "people"],
+    alternative: "Comment on the card to ask someone who may do this.",
+  });
 };
 
-/** Compact card shape for list and search results (PRD S-3). */
+/** Compact card shape for agent results (PRD S-3). */
 export const compactCard = (card: CardWithContext) => ({
   id: card.id,
   title: card.title,
@@ -76,7 +57,6 @@ export const compactCard = (card: CardWithContext) => ({
   version: card.version,
   updatedAt: card.updatedAt.toISOString(),
 });
-export type CompactCard = ReturnType<typeof compactCard>;
 
 const lastActor = async (orgId: string, cardId: string) => {
   const entry = await db.auditLog.findFirst({
@@ -99,7 +79,7 @@ const staleVersion = async (actor: Actor, cardId: string) => {
   const card = await loadCard(db, actor, cardId);
   return new DomainError(
     "stale_version",
-    `Card changed since version you read; it is now at version ${card.version}`,
+    `Card changed since the version you read; it is now at version ${card.version}`,
     {
       current: compactCard(card),
       lastActor: await lastActor(actor.orgId, cardId),
@@ -107,17 +87,7 @@ const staleVersion = async (actor: Actor, cardId: string) => {
   );
 };
 
-/** Retries once when a concurrent call took the same external key first. */
-const withKeyRetry = async <T>(fn: () => Promise<T>): Promise<T> => {
-  try {
-    return await fn();
-  } catch (error) {
-    if (isUniqueViolation(error)) return fn();
-    throw error;
-  }
-};
-
-const nextOrder = async (tx: Tx, listId: string) => {
+export const nextOrder = async (tx: Tx, listId: string) => {
   const last = await tx.card.findFirst({
     where: { listId },
     orderBy: { order: "desc" },
@@ -131,6 +101,8 @@ export interface CreateCardInput {
   title: string;
   description?: string;
   externalKey?: string;
+  /** Labels to copy onto the new card; used by the UI copy. */
+  labelIds?: string[];
 }
 
 /**
@@ -138,36 +110,21 @@ export interface CreateCardInput {
  * returns the existing card without a second create entry (PRD C-3).
  */
 export const createCard = async (actor: Actor, input: CreateCardInput) => {
-  checkText("title", input.title, LIMITS.title);
-  if (input.description) {
-    checkText("description", input.description, LIMITS.description);
-  }
-
-  return withKeyRetry(() =>
-    transaction(async (tx) => {
+  const { result, created } = await keyedWrite({
+    orgId: actor.orgId,
+    scope: keyScope(actor),
+    key: input.externalKey,
+    payload: {
+      listId: input.listId,
+      title: input.title,
+      description: input.description ?? null,
+    },
+    entityType: ENTITY_TYPE.CARD,
+    tokenId: actor.tokenId,
+    replay: (tx, cardId) => loadCard(tx, actor, cardId),
+    write: async (tx) => {
       const list = await loadList(tx, actor, input.listId);
-      const scope = keyScope(actor);
-      const payloadHash = hashPayload({
-        listId: input.listId,
-        title: input.title,
-        description: input.description ?? null,
-      });
-
-      if (input.externalKey) {
-        const existing = await findExternalKey(
-          tx,
-          actor.orgId,
-          scope,
-          input.externalKey,
-          payloadHash,
-        );
-        if (existing) {
-          const card = await loadCard(tx, actor, existing.entityId);
-          return { card, created: false };
-        }
-      }
-
-      await enforce(tx, actor, { kind: "create", list }, list.board.template);
+      requireCapability(actor, "create");
 
       const card = await tx.card.create({
         data: {
@@ -179,21 +136,14 @@ export const createCard = async (actor: Actor, input: CreateCardInput) => {
           creatorId: actor.id,
           creatorName: actor.name,
           creatorSurface: actor.surface,
+          labels: {
+            createMany: {
+              data: (input.labelIds ?? []).map((labelId) => ({ labelId })),
+            },
+          },
         },
         include: cardWithContext,
       });
-
-      if (input.externalKey) {
-        await saveExternalKey(tx, {
-          orgId: actor.orgId,
-          scope,
-          key: input.externalKey,
-          payloadHash,
-          entityType: ENTITY_TYPE.CARD,
-          entityId: card.id,
-          tokenId: actor.tokenId,
-        });
-      }
 
       await writeAudit(tx, actor, {
         action: ACTION.CREATE,
@@ -203,43 +153,10 @@ export const createCard = async (actor: Actor, input: CreateCardInput) => {
         cardId: card.id,
         toListId: list.id,
       });
-      return { card, created: true };
-    }),
-  );
-};
-
-export type BatchItemResult =
-  | { ok: true; created: boolean; card: CompactCard }
-  | { ok: false; error: { type: string; message: string } };
-
-/**
- * Creates several cards, one transaction each, and returns one result per item
- * in input order; a failed item does not stop the others (PRD S-4).
- */
-export const createCards = async (
-  actor: Actor,
-  items: CreateCardInput[],
-): Promise<BatchItemResult[]> => {
-  if (items.length > LIMITS.batch) {
-    throw new DomainError(
-      "invalid",
-      `A batch holds at most ${LIMITS.batch} cards`,
-    );
-  }
-  const results: BatchItemResult[] = [];
-  for (const item of items) {
-    try {
-      const { card, created } = await createCard(actor, item);
-      results.push({ ok: true, created, card: compactCard(card) });
-    } catch (error) {
-      if (!(error instanceof DomainError)) throw error;
-      results.push({
-        ok: false,
-        error: { type: error.type, message: error.message },
-      });
-    }
-  }
-  return results;
+      return { entityId: card.id, result: card };
+    },
+  });
+  return { card: result, created };
 };
 
 export interface UpdateCardInput {
@@ -251,19 +168,9 @@ export interface UpdateCardInput {
 }
 
 export const updateCard = async (actor: Actor, input: UpdateCardInput) => {
-  if (input.title !== undefined) checkText("title", input.title, LIMITS.title);
-  if (input.description) {
-    checkText("description", input.description, LIMITS.description);
-  }
-
   const result = await transaction(async (tx) => {
     const card = await loadCard(tx, actor, input.cardId);
-    await enforce(
-      tx,
-      actor,
-      { kind: "edit", list: card.list },
-      card.list.board.template,
-    );
+    requireCapability(actor, "update");
 
     const version = input.expectedVersion ?? card.version;
     const data: Prisma.CardUpdateManyMutationInput = {
@@ -322,16 +229,12 @@ export const moveCard = async (actor: Actor, input: MoveCardInput) => {
     if (target.boardId !== card.list.boardId) {
       throw new DomainError("invalid", "Cards move only within their board");
     }
-
-    const sameList = target.id === card.listId;
-    const op: CardOperation = sameList
-      ? { kind: "reorder", list: card.list }
-      : { kind: "move", from: card.list, to: target };
-    await enforce(tx, actor, op, card.list.board.template);
+    requireCapability(actor, "move");
 
     const version = input.expectedVersion ?? card.version;
     if (version !== card.version) return null;
 
+    const sameList = target.id === card.listId;
     const siblings = await tx.card.findMany({
       where: { listId: target.id, NOT: { id: card.id } },
       orderBy: { order: "asc" },
@@ -387,23 +290,19 @@ export const moveCard = async (actor: Actor, input: MoveCardInput) => {
   return result;
 };
 
-/** UI copy: a create in the same list under the same rules. */
+/** UI copy: one create, with the labels, in the same list. */
 export const copyCard = async (actor: Actor, cardId: string) => {
   const source = await loadCard(db, actor, cardId);
   const { card } = await createCard(actor, {
     listId: source.listId,
     title: `${source.title} (Clone)`,
     description: source.description ?? undefined,
+    labelIds: source.labels.map((l) => l.labelId),
   });
-  if (source.labels.length > 0) {
-    await db.cardLabel.createMany({
-      data: source.labels.map((l) => ({ cardId: card.id, labelId: l.labelId })),
-    });
-  }
   return card;
 };
 
-/** Assigning or removing a label is an edit under the list's edit rule. */
+/** Assigning or removing a label is an edit to the card. */
 export const setCardLabel = async (
   actor: Actor,
   input: { cardId: string; labelId: string; assigned: boolean },
@@ -414,12 +313,7 @@ export const setCardLabel = async (
       where: { id: input.labelId, orgId: actor.orgId },
     });
     if (!label) throw notFound("Label");
-    await enforce(
-      tx,
-      actor,
-      { kind: "edit", list: card.list },
-      card.list.board.template,
-    );
+    requireCapability(actor, "update");
 
     const where = {
       cardId_labelId: { cardId: card.id, labelId: label.id },
@@ -432,7 +326,7 @@ export const setCardLabel = async (
     } else if (!input.assigned && existing) {
       await tx.cardLabel.delete({ where });
     } else {
-      return existing ?? { cardId: card.id, labelId: label.id };
+      return { cardId: card.id, labelId: label.id };
     }
 
     await tx.card.update({
@@ -448,138 +342,3 @@ export const setCardLabel = async (
     });
     return { cardId: card.id, labelId: label.id };
   });
-
-/** Card read used by the UI read route and the get_card tool. */
-export const getCardForUi = async (actor: Actor, cardId: string) => {
-  // Leave out the board: its image fields can hold large data URLs.
-  const { list, ...card } = await loadCard(db, actor, cardId);
-  const { board: _board, ...listOnly } = list;
-  void _board;
-  return { ...card, list: listOnly };
-};
-
-/**
- * Everything about one card in one call (PRD S-3): description, labels,
- * comments, provenance and a paged slice of activity.
- */
-export const getCard = async (
-  actor: Actor,
-  cardId: string,
-  options: { activityLimit?: number; activityBefore?: number } = {},
-) => {
-  const card = await loadCard(db, actor, cardId);
-  const [comments, key, activity] = await Promise.all([
-    db.comment.findMany({
-      where: { cardId: card.id },
-      orderBy: { createdAt: "asc" },
-      take: LIMITS.page,
-    }),
-    db.externalKey.findFirst({
-      where: { orgId: actor.orgId, entityId: card.id, entityType: "CARD" },
-    }),
-    getCardActivity(actor, card.id, {
-      limit: options.activityLimit,
-      before: options.activityBefore,
-    }),
-  ]);
-
-  return {
-    ...compactCard(card),
-    description: card.description,
-    createdAt: card.createdAt.toISOString(),
-    provenance: {
-      creatorKind: card.creatorKind,
-      creatorName: card.creatorName,
-      surface: card.creatorSurface,
-      externalKey: key?.key ?? null,
-    },
-    comments: comments.map((c) => ({
-      id: c.id,
-      kind: c.kind,
-      body: c.body,
-      duplicateOfCardId: c.duplicateOfCardId,
-      actor: { kind: c.actorKind, name: c.actorName, surface: c.surface },
-      createdAt: c.createdAt.toISOString(),
-    })),
-    activity,
-  };
-};
-
-/** Successful entries about one card, newest first, paged by event id. */
-export const getCardActivity = async (
-  actor: Actor,
-  cardId: string,
-  options: { limit?: number; before?: number } = {},
-) => {
-  const limit = Math.min(options.limit ?? 10, LIMITS.page);
-  const entries = await db.auditLog.findMany({
-    where: {
-      orgId: actor.orgId,
-      outcome: OUTCOME.OK,
-      OR: [{ entityId: cardId }, { cardId }],
-      ...(options.before ? { eventId: { lt: options.before } } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: limit,
-  });
-  return entries;
-};
-
-const compactInclude = {
-  list: { include: { board: true } },
-  labels: { include: { label: true } },
-} satisfies Prisma.CardInclude;
-
-/** Compact, paged card list for one board or list, in board order. */
-export const listCards = async (
-  actor: Actor,
-  options: { boardId?: string; listId?: string; limit?: number; cursor?: string },
-) => {
-  const limit = Math.min(options.limit ?? LIMITS.page, LIMITS.page);
-  const offset = options.cursor ? Number(options.cursor) : 0;
-  if (!Number.isInteger(offset) || offset < 0) {
-    throw new DomainError("invalid", "cursor must be a value from nextCursor");
-  }
-  const cards = await db.card.findMany({
-    where: {
-      ...cardScope(actor),
-      ...(options.listId ? { listId: options.listId } : {}),
-      ...(options.boardId ? { list: { boardId: options.boardId, board: { orgId: actor.orgId } } } : {}),
-    },
-    include: compactInclude,
-    orderBy: [{ list: { order: "asc" } }, { order: "asc" }],
-    skip: offset,
-    take: limit + 1,
-  });
-  return {
-    cards: cards.slice(0, limit).map(compactCard),
-    nextCursor: cards.length > limit ? String(offset + limit) : null,
-  };
-};
-
-/** Searches card titles, descriptions and comments in the actor's workspace. */
-export const searchCards = async (
-  actor: Actor,
-  options: { query: string; boardId?: string; limit?: number },
-) => {
-  checkText("query", options.query, LIMITS.query);
-  const limit = Math.min(options.limit ?? LIMITS.page, LIMITS.page);
-  const contains = { contains: options.query, mode: "insensitive" as const };
-  const cards = await db.card.findMany({
-    where: {
-      list: {
-        board: { orgId: actor.orgId },
-        ...(options.boardId ? { boardId: options.boardId } : {}),
-      },
-      OR: [
-        { title: contains },
-        { description: contains },
-        { comments: { some: { body: contains } } },
-      ],
-    },
-    include: compactInclude,
-    orderBy: { updatedAt: "desc" },
-    take: limit,
-  });
-  return { cards: cards.map(compactCard) };
-};

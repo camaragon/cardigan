@@ -1,23 +1,45 @@
+import { db } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { getCardForUi } from "@/lib/domain/cards";
-import { isDomainError } from "@/lib/domain/errors";
-import { getPersonActor } from "@/lib/domain/person";
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ cardId: string }> },
 ) {
   try {
-    const actor = await getPersonActor();
-    if (!actor) {
+    const { userId, orgId } = await auth();
+
+    if (!userId || !orgId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
+
     const { cardId } = await params;
-    return NextResponse.json(await getCardForUi(actor, cardId));
-  } catch (error) {
-    if (isDomainError(error) && error.type === "not_found") {
-      return NextResponse.json(null);
-    }
+
+    const card = await db.card.findUnique({
+      where: {
+        id: cardId,
+        list: {
+          board: {
+            orgId,
+          },
+        },
+      },
+      include: {
+        list: {
+          select: {
+            title: true,
+          },
+        },
+        labels: {
+          include: {
+            label: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(card);
+  } catch {
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
