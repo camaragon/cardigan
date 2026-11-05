@@ -10,6 +10,13 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+  // The MCP route authenticates with agent tokens, not Clerk sessions, and
+  // returns 404 itself unless MCP_ENABLED is set (ADR 0001, ADR 0002).
+  const { pathname } = req.nextUrl;
+  if (pathname === "/api/mcp" || pathname.startsWith("/api/mcp/")) {
+    return NextResponse.next();
+  }
+
   if (isPrivateMode && req.nextUrl.pathname === "/api/webhook") {
     return new NextResponse(null, { status: 404 });
   }
