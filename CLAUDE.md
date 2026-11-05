@@ -52,7 +52,7 @@ All mutations use a consistent server action pattern:
 - Each action has `index.ts` (handler), `schema.ts` (Zod validation), `types.ts` (TypeScript types)
 - `createSafeAction` (`lib/create-safe-action.ts`) validates input with Zod, returns `{ fieldErrors, error, data }`
 - Client-side: `useAction` hook (`hooks/use-action.ts`) wraps action calls with `onSuccess`/`onError`/`onComplete` callbacks and loading state
-- Handlers check auth, enforce subscription/free-tier limits, create audit logs, and call `revalidatePath`
+- Handlers resolve the Clerk session to a person actor and call the shared domain functions in `lib/domain/` (authorization, list rules, audit logs); they enforce subscription/free-tier limits and call `revalidatePath`
 
 #### Route Structure
 - **Marketing pages**: `app/(marketing)/` - public landing pages
