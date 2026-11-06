@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Preserve loopback origins in Clerk rewrites behind a TLS-terminating proxy.
+  skipProxyUrlNormalize: true,
   env: {
     PRIVATE_MODE: process.env.PRIVATE_MODE === "true" ? "true" : "false",
   },
