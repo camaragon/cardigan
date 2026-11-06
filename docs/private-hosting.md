@@ -33,6 +33,12 @@ Clerk session protection and relies on agent tokens. The owner creates and
 revokes tokens on a workspace's Agents page; an agent sends its token as
 `Authorization: Bearer <token>` over Streamable HTTP.
 
+Friction reports go to the suggestion box on Cardigan's own board. Set
+`SUGGESTION_BOX_ORG_ID` (the Clerk organization id of Cardigan's workspace) and
+`SUGGESTION_BOX_BOARD_ID` (that workspace's board id); the Suggestion box list is
+added to that board on the first report. Without both settings, `report_friction`
+answers that the suggestion box is unavailable.
+
 ```sh
 npm ci
 npm run schema:generate

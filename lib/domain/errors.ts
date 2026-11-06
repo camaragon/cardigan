@@ -7,7 +7,9 @@ export type DomainErrorType =
   | "invalid"
   | "denied"
   | "conflict"
-  | "stale_version";
+  | "stale_version"
+  | "rate_limited"
+  | "unavailable";
 
 export interface RuleDenial {
   /** The rule that refused the action, e.g. "role.capability". */

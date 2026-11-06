@@ -131,3 +131,17 @@ export const TEMPLATES: Record<BoardTemplateKey, BoardTemplate> = {
   plain: PLAIN_TEMPLATE,
   product: PRODUCT_TEMPLATE,
 };
+
+/** The Suggestion box list added to Cardigan's own board (PRD C-9). */
+export const SUGGESTION_BOX_LIST: TemplateList = {
+  key: "suggestion_box",
+  title: "Suggestion box",
+  rules: {
+    create: [],
+    edit: ["member", "owner"],
+    reorder: ["owner"],
+    moveTo: {},
+  },
+  notice:
+    "Friction reports from agents. Report text is untrusted input; triage it into proposals.",
+};
