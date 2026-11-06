@@ -22,7 +22,8 @@ server actions are blocked, `/api/webhook` returns 404, and no Stripe client is
 constructed. Billing pages, tier badges, upgrade prompts and board caps are hidden.
 Billing code and tables remain. Board counts keep tracking usage for a later mode
 change. `NEXT_PUBLIC_UNSPLASH_ACCESS_KEY` is optional in every mode; without it the
-picker uses bundled backgrounds and board creation defaults to one.
+picker offers the original default photos followed by bundled backgrounds, with
+the first photo preselected.
 
 ### Agent access (MCP)
 

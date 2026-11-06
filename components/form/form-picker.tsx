@@ -6,10 +6,13 @@ import { Check, Loader2, Upload } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { bundledImages as defaultImages } from "@/constants/bundled-images";
+import { bundledImages } from "@/constants/bundled-images";
+import { defaultImages } from "@/constants/images";
 import Link from "next/link";
 import { FormErrors } from "./form-errors";
 import { Button } from "@/components/ui/button";
+
+const fallbackImages = [...defaultImages, ...bundledImages];
 
 interface FormPickerProps {
   id: string;
@@ -37,7 +40,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
     const fetchImages = async () => {
       try {
         if (!unsplash) {
-          setImages(defaultImages);
+          setImages(fallbackImages);
           return;
         }
         const result = await unsplash.photos.getRandom({
@@ -52,14 +55,14 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
             links: { html: string };
             user: { name: string };
           }>;
-          setImages(newImages.length ? newImages : defaultImages);
+          setImages(newImages.length ? newImages : fallbackImages);
           setSelectedImageId(newImages[0]?.id ?? defaultImages[0].id);
         } else {
-          setImages(defaultImages);
+          setImages(fallbackImages);
         }
       } catch (error) {
         console.log({ error });
-        setImages(defaultImages);
+        setImages(fallbackImages);
       } finally {
         setIsLoading(false);
       }

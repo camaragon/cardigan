@@ -176,7 +176,7 @@ Clerk handles auth with `proxy.ts` (Next.js 16 convention, replaces `middleware.
 
 ## Deployment
 
-For the private deployment, follow the [private hosting runbook](docs/private-hosting.md). Keep Clerk sign-in and workspaces enabled. `PRIVATE_MODE=true` disables billing and board limits; Stripe keys are unnecessary. Unsplash is optional in all modes, with bundled backgrounds used when unavailable. Billing code remains available when private mode is off.
+For the private deployment, follow the [private hosting runbook](docs/private-hosting.md). Keep Clerk sign-in and workspaces enabled. `PRIVATE_MODE=true` disables billing and board limits; Stripe keys are unnecessary. Unsplash is optional in all modes, with the original default photos followed by bundled backgrounds when unavailable. Billing code remains available when private mode is off.
 
 ## License
 
