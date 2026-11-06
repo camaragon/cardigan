@@ -3,6 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import { db } from "@/lib/db";
 import { checkSubscription } from "@/lib/subscription";
 import { isOwner } from "@/lib/domain/actor";
+import { listBoardsWithRules } from "@/lib/domain/boards";
 import { getPersonActor } from "@/lib/domain/person";
 import { AGENT_ROLE, listAgentTokens } from "@/lib/domain/tokens";
 import { Info } from "../_components/info";
@@ -12,12 +13,13 @@ const AgentsPage = async () => {
   const actor = await getPersonActor();
   if (!actor) redirect("/select-org");
 
-  const [isPro, roles] = await Promise.all([
+  const [isPro, roles, boards] = await Promise.all([
     checkSubscription(),
     db.agentRole.findMany({
       where: { orgId: actor.orgId },
       orderBy: { name: "asc" },
     }),
+    listBoardsWithRules(actor.orgId),
   ]);
   const owner = isOwner(actor);
   const tokens = owner ? await listAgentTokens(actor) : [];
@@ -71,6 +73,66 @@ const AgentsPage = async () => {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-neutral-700">List rules</h2>
+        <p className="text-sm text-muted-foreground">
+          Rules come from each board&apos;s template and apply to people and
+          agents alike, in the app and through MCP.
+        </p>
+        {boards.map((board) => (
+          <div key={board.id} className="rounded-md border p-3 space-y-2">
+            <div>
+              <p className="font-semibold text-neutral-700">
+                {board.title}{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {board.template} template
+                </span>
+              </p>
+              {board.notice && (
+                <p className="text-xs text-muted-foreground">{board.notice}</p>
+              )}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="text-left text-muted-foreground">
+                  <tr>
+                    <th className="py-1 pr-3 font-medium">List</th>
+                    <th className="py-1 pr-3 font-medium">Create</th>
+                    <th className="py-1 pr-3 font-medium">Edit</th>
+                    <th className="py-1 pr-3 font-medium">Reorder</th>
+                    <th className="py-1 pr-3 font-medium">Move to</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {board.lists.map((list) => (
+                    <tr key={list.id} className="border-t align-top">
+                      <td className="py-1 pr-3">
+                        <p className="font-medium">{list.title}</p>
+                        {list.notice && (
+                          <p className="text-muted-foreground">{list.notice}</p>
+                        )}
+                      </td>
+                      <td className="py-1 pr-3">{list.rules.create.join(", ")}</td>
+                      <td className="py-1 pr-3">{list.rules.edit.join(", ")}</td>
+                      <td className="py-1 pr-3">{list.rules.reorder.join(", ")}</td>
+                      <td className="py-1 pr-3">
+                        {Object.entries(list.rules.moveTo).length === 0
+                          ? "no one"
+                          : Object.entries(list.rules.moveTo).map(([target, who]) => (
+                              <p key={target}>
+                                {target}: {who.join(", ")}
+                              </p>
+                            ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
       </section>
     </div>
   );
