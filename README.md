@@ -128,6 +128,8 @@ cardigan/
 | `npm run schema:reset`     | Reset database                                |
 | `npm run schema:studio`    | Open Prisma Studio                            |
 
+`npm run lint` enforces a 1,000-line code file cap, excluding bundled image data.
+
 ## Testing
 
 - **Unit tests** (`tests/unit`) need nothing and run in parallel.
