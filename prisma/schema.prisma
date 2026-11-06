@@ -23,6 +23,10 @@ model Board {
 	imageFullUrl	String @db.Text
 	imageUserName	String @db.Text
 	imageLinkHTML	String @db.Text
+	// Template the board was created from ("plain" or "product"); see ADR 0004.
+	template		String @default("plain")
+	// Short guidance on how work flows on the board, seeded by the template.
+	notice			String? @db.Text
 
 	lists			List[]
 
@@ -37,6 +41,12 @@ model List {
 
 	boardId		String
 	board		Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+	// Template list key (for example "queued"), used by list rules to name targets.
+	templateKey	String?
+	// List rules (ListRules in lib/domain/rules.ts); null means the template default.
+	rules		Json?
+	notice		String? @db.Text
 
 	cards		Card[]
 
