@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { unsplash } from "@/lib/unsplash";
-import { Check, Loader2, Upload } from "lucide-react";
+import { Check, Loader2, RefreshCw, Upload } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -31,38 +31,41 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const fetchImages = async () => {
-      try {
-        if (!unsplash) {
-          setImages(defaultImages);
-          return;
-        }
-        const result = await unsplash.photos.getRandom({
-          collectionIds: ["317099"],
-          count: 9,
-        });
-
-        if (result && result.response) {
-          const newImages = result.response as Array<{
-            id: string;
-            urls: { thumb: string; full: string };
-            links: { html: string };
-            user: { name: string };
-          }>;
-          setImages(newImages);
-        } else {
-          console.error("Failed to fetch images from Unsplash");
-        }
-      } catch (error) {
-        console.log({ error });
-      } finally {
-        setIsLoading(false);
+  const fetchImages = useCallback(async () => {
+    setIsLoading(true);
+    setSelectedImageId(null);
+    setImages([]);
+    try {
+      if (!unsplash) {
+        setImages(defaultImages);
+        return;
       }
-    };
+      const result = await unsplash.photos.getRandom({
+        collectionIds: ["317099"],
+        count: 9,
+      });
 
-    fetchImages();
+      if (result && result.response) {
+        const newImages = result.response as Array<{
+          id: string;
+          urls: { thumb: string; full: string };
+          links: { html: string };
+          user: { name: string };
+        }>;
+        setImages(newImages);
+      } else {
+        console.error("Failed to fetch images from Unsplash");
+      }
+    } catch (error) {
+      console.error("Failed to fetch images from Unsplash", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchImages();
+  }, [fetchImages]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -159,8 +162,21 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
         </div>
       )}
 
-      <div className="text-xs text-neutral-500 mb-2 text-center">
+      <div className="text-xs text-neutral-500 mb-2 flex items-center justify-center gap-1">
         Or choose from Unsplash
+        {unsplash && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            aria-label="Refresh Unsplash photos"
+            onClick={fetchImages}
+            disabled={isLoading || pending}
+          >
+            <RefreshCw className="h-3 w-3" aria-hidden="true" />
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-2">
