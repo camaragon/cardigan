@@ -1,13 +1,17 @@
-import { startCase } from "lodash";
 import { OrgControl } from "./_components/org-control";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 
 // Generates the org name in the tab along with the app name
 export const generateMetadata = async () => {
-  const { orgSlug } = await auth();
+  const { orgId } = await auth();
+  const organization = orgId
+    ? await (await clerkClient()).organizations.getOrganization({
+        organizationId: orgId,
+      })
+    : null;
 
   return {
-    title: startCase(orgSlug || "organization"),
+    title: organization?.name ?? "Workspace",
   };
 };
 
