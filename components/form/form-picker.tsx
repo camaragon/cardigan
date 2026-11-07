@@ -27,9 +27,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
     }>
   >([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(
-    defaultImages[0].id,
-  );
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,14 +50,12 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
             links: { html: string };
             user: { name: string };
           }>;
-          setImages(newImages.length ? newImages : defaultImages);
-          setSelectedImageId(newImages[0]?.id ?? defaultImages[0].id);
+          setImages(newImages);
         } else {
-          setImages(defaultImages);
+          console.error("Failed to fetch images from Unsplash");
         }
       } catch (error) {
         console.log({ error });
-        setImages(defaultImages);
       } finally {
         setIsLoading(false);
       }
@@ -164,7 +160,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
       )}
 
       <div className="text-xs text-neutral-500 mb-2 text-center">
-        Or choose a background
+        Or choose from Unsplash
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-2">
@@ -192,7 +188,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
             />
             <Image
               src={image.urls.thumb}
-              alt="Board background"
+              alt="Unpslash image"
               className="object-cover rounded-sm"
               fill
             />
