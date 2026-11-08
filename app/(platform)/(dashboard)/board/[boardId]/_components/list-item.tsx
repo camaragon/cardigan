@@ -12,9 +12,10 @@ interface ListItemProps {
   data: ListWithCards;
   index: number;
   filtering?: boolean;
+  isOrdering?: boolean;
 }
 
-export const ListItem = ({ data, index, filtering = false }: ListItemProps) => {
+export const ListItem = ({ data, index, filtering = false, isOrdering = false }: ListItemProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -30,7 +31,7 @@ export const ListItem = ({ data, index, filtering = false }: ListItemProps) => {
   };
 
   return (
-    <Draggable draggableId={data.id} index={index} isDragDisabled={filtering}>
+    <Draggable draggableId={data.id} index={index} isDragDisabled={filtering || isOrdering}>
       {(provided) => (
         <li
           {...provided.draggableProps}
@@ -59,6 +60,7 @@ export const ListItem = ({ data, index, filtering = false }: ListItemProps) => {
                   {data.cards.map((card, index) => (
                     <CardItem
                       index={index}
+                      isDragDisabled={isOrdering}
                       key={card.id}
                       data={card}
                     />
