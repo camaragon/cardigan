@@ -10,23 +10,21 @@ const svg = (content) =>
 const smallMark = (size) =>
   paths
     .replace('stroke-width="5.5"', `stroke-width="${size === 16 ? 7.5 : size === 32 ? 7 : 5.5}"`)
-    .replace("#3AA0DE", size === 16 ? "#0A5C94" : "#3AA0DE");
+    .replace("#3AA0DE", "#A8DBF8")
+    .replace("#0A5C94", "#FFFFFF");
+const faviconTile = (content) =>
+  `<rect width="48" height="48" rx="10.5" fill="#0A5C94"/><g transform="translate(6.75 6.75) scale(0.71875)">${content}</g>`;
 
 // SVG image media queries use the rendered viewport, including favicon size.
 await writeFile(
   new URL("favicon.svg", output),
   svg(`<style>
-    svg { --sky: #3AA0DE; --blue: #0A5C94; }
     g { stroke-width: 5.5; }
     @media (max-width: 40px) { g { stroke-width: 7; } }
-    @media (prefers-color-scheme: dark) {
-      svg { --sky: #5DB7EE; --blue: #FFFFFF; }
-    }
     @media (max-width: 16px) {
-      svg { --sky: var(--blue); }
       g { stroke-width: 7.5; }
     }
-  </style>${paths.replace("#3AA0DE", "var(--sky)").replace("#0A5C94", "var(--blue)")}`),
+  </style>${faviconTile(smallMark(48))}`),
 );
 
 // iOS supplies the icon mask; keep the source square and opaque.
@@ -43,7 +41,7 @@ await writeFile(
 // ICO directory entries point to PNG images, with size-specific strokes.
 const sizes = [16, 32, 48];
 const images = await Promise.all(sizes.map((size) =>
-  sharp(Buffer.from(svg(smallMark(size)))).resize(size, size).png().toBuffer(),
+  sharp(Buffer.from(svg(faviconTile(smallMark(size))))).resize(size, size).png().toBuffer(),
 ));
 const directory = Buffer.alloc(6 + 16 * sizes.length);
 directory.writeUInt16LE(1, 2);
