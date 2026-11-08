@@ -34,11 +34,11 @@ export const ListItem = ({ data, index }: ListItemProps) => {
         <li
           {...provided.draggableProps}
           ref={provided.innerRef}
-          className="shrink-0 h-full w-[272px] select-none"
+          className="shrink-0 w-[272px] select-none"
         >
           <div
             {...provided.dragHandleProps}
-            className="w-full rounded-md bg-[#f1f2f4] shadow-md pb-2"
+            className="flex max-h-[calc(100dvh-9.5rem)] w-full flex-col rounded-md bg-[#f1f2f4] shadow-md pb-2"
           >
             <ListHeader data={data} onAddCardAction={enableEditing} />
             <Droppable droppableId={data.id} type="card">
@@ -47,7 +47,7 @@ export const ListItem = ({ data, index }: ListItemProps) => {
                   {...provided.droppableProps}
                   ref={provided.innerRef}
                   className={cn(
-                    "mx-1 px-1 py-0.5 flex flex-col gap-y-2",
+                    "board-scrollbar min-h-0 overflow-y-auto overscroll-contain mx-1 px-1 py-0.5 flex flex-col gap-y-2 [&>div]:shrink-0",
                     data.cards.length > 0 ? "mt-2" : "mt-0",
                   )}
                 >
