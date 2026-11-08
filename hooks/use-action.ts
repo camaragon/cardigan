@@ -47,6 +47,8 @@ export const useAction = <TInput, TOutput>(
           if (request === latestRequest.current) setResult({ data: outcome.data });
           options.onSuccess?.(outcome.data as TOutput);
         }
+
+        return outcome;
       } finally {
         pending.current--;
         setIsLoading(pending.current > 0);

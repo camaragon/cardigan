@@ -1,6 +1,8 @@
 "use client";
 
-import { FormInput } from "@/components/form/form-input";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { CardConflict } from "./card-conflict";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CardWithList } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,15 +17,17 @@ interface HeaderProps {
 }
 
 export const Header = ({ data }: HeaderProps) => {
-  const [title, setTitle] = useState(data.title);
+  const [draft, setDraft] = useState<{ title: string; version: number } | null>(null);
+  const [conflict, setConflict] = useState(false);
   const queryClient = useQueryClient();
   const params = useParams();
 
-  const { execute } = useAction(updateCard, {
+  const { execute, isLoading } = useAction(updateCard, {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["card", data.id] });
       queryClient.invalidateQueries({ queryKey: ["card-logs", data.id] });
-      setTitle(data.title);
+      setDraft(null);
+      setConflict(false);
       toast.success(`Renamed to "${data.title}"`);
     },
     onError: (error) => {
@@ -34,16 +38,21 @@ export const Header = ({ data }: HeaderProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onBlur = () => {
-    inputRef.current?.form?.requestSubmit();
+    if (!conflict) inputRef.current?.form?.requestSubmit();
   };
 
-  const onSubmit = (formData: FormData) => {
+  const onSubmit = async (formData: FormData) => {
     const title = formData.get("title") as string;
     const boardId = params.boardId as string;
 
-    if (title === data.title) return;
+    if (!draft) return;
+    if (title === data.title) {
+      setDraft(null);
+      return;
+    }
 
-    execute({ title, boardId, id: data.id });
+    const result = await execute({ title, boardId, id: data.id, version: draft.version });
+    if (result?.domainError?.type === "stale_version") setConflict(true);
   };
 
   return (
@@ -51,13 +60,23 @@ export const Header = ({ data }: HeaderProps) => {
       <div className="w-full">
         <form action={onSubmit}>
           <label htmlFor="title" className="sr-only">Card title</label>
-          <FormInput
+          <Input
             ref={inputRef}
             onBlur={onBlur}
             id="title"
-            defaultValue={title}
+            name="title"
+            value={draft?.title ?? data.title}
+            onFocus={() => setDraft((draft) => draft ?? { title: data.title, version: data.version })}
+            onChange={(event) => setDraft({ title: event.target.value, version: draft?.version ?? data.version })}
+            disabled={isLoading}
             className="shadow-none font-semibold text-xl px-1 text-neutral-700 bg-transparent border-transparent relative -left-1.5 w-full focus-visible:bg-white focus-visible:border-input mb-0.5 truncate"
           />
+          {conflict && (
+            <>
+              <CardConflict cardId={data.id} onReload={(latest) => setDraft((draft) => draft && { ...draft, version: latest.version })} />
+              <Button size="sm" disabled={isLoading}>Save draft</Button>
+            </>
+          )}
         </form>
         <p className="truncate text-sm text-muted-foreground">
           in list <span className="underline">{data.list.title}</span>

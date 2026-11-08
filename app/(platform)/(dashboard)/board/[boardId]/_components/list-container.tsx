@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { ListWithCards } from "@/types";
 import { ListForm } from "./list-form";
 import { useEffect, useState, useRef, useTransition } from "react";
@@ -38,6 +39,8 @@ const reorder = <T,>(list: T[], startIndex: number, endIndex: number): T[] => {
 export const ListContainer = ({ boardId, data }: ListContainerProps) => {
   const router = useRouter();
   const snapshot = useRef<ListWithCards[] | null>(null);
+  const observedDrag = useRef<{ id: string; version: number } | null>(null);
+  const [moveConflict, setMoveConflict] = useState<string | null>(null);
   const [isOrdering, startOrdering] = useTransition();
   const [optimisticData, setOrderedData] = useState<ListWithCards[]>(data);
 
@@ -54,7 +57,7 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
     if (!isOrdering) snapshot.current = null;
   }, [isOrdering]);
 
-  const submitOrder = (next: ListWithCards[], execute: () => Promise<void>) => {
+  const submitOrder = (next: ListWithCards[], execute: () => Promise<unknown>) => {
     // The ref also blocks a second drop before React renders the pending state.
     if (snapshot.current) return;
     snapshot.current = orderedData;
@@ -79,6 +82,7 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
 
   const { execute: executeMoveCard } = useAction(moveCard, {
     onSuccess: () => {
+      setMoveConflict(null);
       toast.success("Card moved");
     },
     onError: rollback,
@@ -101,7 +105,7 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
       (list) => list.id === destination.droppableId,
     );
 
-    if (!sourceList || !destinationList) return;
+    if (!sourceList || !destinationList || observedDrag.current?.id !== cardId) return;
 
     const sourceIndex = sourceList.cards.findIndex((card) => card.id === cardId);
     if (sourceIndex === -1) return;
@@ -118,12 +122,19 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
     });
 
     // One drag is one audited single-card move (PRD C-6).
-    submitOrder(newOrderedData, () => executeMoveCard({
-      id: movedCard.id,
-      boardId,
-      toListId: destinationList.id,
-      position,
-    }));
+    const version = observedDrag.current.version;
+    submitOrder(newOrderedData, async () => {
+      const result = await executeMoveCard({
+        id: movedCard.id,
+        boardId,
+        toListId: destinationList.id,
+        position,
+        version,
+      });
+      if (result?.domainError?.type === "stale_version") {
+        setMoveConflict(`“${movedCard.title}” changed. Your move to “${destinationList.title}” was not applied. Reload the board to compare, then try the move again.`);
+      }
+    });
   };
 
   const handleListReorder = (
@@ -171,7 +182,16 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
           matching cards.
         </p>
       )}
-      <DragDropContext onDragEnd={onDragEnd}>
+      {moveConflict && (
+        <div role="alert" className="mb-3 w-fit rounded-md bg-amber-50 p-3 text-sm text-neutral-800">
+          <p>{moveConflict}</p>
+          <Button size="sm" variant="outline" onClick={() => router.refresh()}>Reload board</Button>
+        </div>
+      )}
+      <DragDropContext onBeforeCapture={({ draggableId }) => {
+        const card = orderedData.flatMap((list) => list.cards).find((card) => card.id === draggableId);
+        observedDrag.current = card ? { id: card.id, version: card.version } : null;
+      }} onDragEnd={onDragEnd}>
         <Droppable droppableId="lists" type="list" direction="horizontal">
           {(provided) => (
             <ol

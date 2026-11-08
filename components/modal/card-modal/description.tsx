@@ -11,6 +11,7 @@ import { RefObject, useEffect, useRef, useState } from "react";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { useAction } from "@/hooks/use-action";
 import { updateCard } from "@/actions/update-card";
+import { CardConflict } from "./card-conflict";
 import { toast } from "sonner";
 
 interface DescriptionProps {
@@ -21,6 +22,10 @@ export const Description = ({ data }: DescriptionProps) => {
   const queryClient = useQueryClient();
   const params = useParams();
   const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [conflict, setConflict] = useState(false);
+  const observedVersion = useRef(data.version);
+  const saving = useRef(false);
   const [expanded, setExpanded] = useState(false);
   const [isClamped, setIsClamped] = useState(false);
   const previewRef = useRef<HTMLSpanElement>(null);
@@ -39,6 +44,9 @@ export const Description = ({ data }: DescriptionProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const enableEditing = () => {
+    observedVersion.current = data.version;
+    setDraft(data.description ?? "");
+    setConflict(false);
     setIsEditing(true);
     setTimeout(() => {
       textareaRef.current?.focus();
@@ -46,7 +54,7 @@ export const Description = ({ data }: DescriptionProps) => {
   };
 
   const disableEditing = () => {
-    setIsEditing(false);
+    if (!conflict && !saving.current) setIsEditing(false);
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -65,22 +73,30 @@ export const Description = ({ data }: DescriptionProps) => {
       });
       queryClient.invalidateQueries({ queryKey: ["card-logs", data.id] });
       toast.success(`Card description updated`);
-      disableEditing();
+      setIsEditing(false);
+      setConflict(false);
     },
     onError: (error) => {
       toast.error(error);
     },
   });
 
-  const onSubmit = (formData: FormData) => {
+  const onSubmit = async (formData: FormData) => {
     const description = formData.get("description") as string;
     const boardId = params.boardId as string;
 
-    execute({
-      id: data.id,
-      boardId,
-      description,
-    });
+    saving.current = true;
+    try {
+      const result = await execute({
+        id: data.id,
+        boardId,
+        description,
+        version: observedVersion.current,
+      });
+      if (result?.domainError?.type === "stale_version") setConflict(true);
+    } finally {
+      saving.current = false;
+    }
   };
 
   return (
@@ -101,15 +117,17 @@ export const Description = ({ data }: DescriptionProps) => {
               label="Edit description"
               className="w-full mt-2 mb-2 min-h-40 [field-sizing:fixed]"
               placeholder="Add a more detailed description"
-              defaultValue={data.description ?? undefined}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
               errors={fieldErrors}
               ref={textareaRef}
             />
+            {conflict && <CardConflict cardId={data.id} onReload={(latest) => { observedVersion.current = latest.version; }} />}
             <div className="flex items-center gap-x-2">
               <FormSubmit>Save</FormSubmit>
               <Button
                 type="button"
-                onClick={disableEditing}
+                onClick={() => { setConflict(false); setIsEditing(false); }}
                 size="sm"
                 variant="ghost"
               >
