@@ -52,7 +52,7 @@ All mutations use a consistent server action pattern:
 - Each action has `index.ts` (handler), `schema.ts` (Zod validation), `types.ts` (TypeScript types)
 - `createSafeAction` (`lib/create-safe-action.ts`) validates input with Zod, returns `{ fieldErrors, error, data }`
 - Client-side: `useAction` hook (`hooks/use-action.ts`) wraps action calls with `onSuccess`/`onError`/`onComplete` callbacks and loading state
-- Handlers check auth (returning `{ error: "Unauthorized" }`), do the work in a `try/catch` that returns `{ error }`, enforce subscription/free-tier limits, then call `revalidatePath` and return `{ data }`; board creation, card, comment and agent-token actions get the person actor from `getPersonActor()` and call the shared domain functions in `lib/domain/` (also used by the MCP route), which write the audit entry, while other board actions and list and label actions use `auth()` and `createAuditLog`
+- Handlers check auth (returning `{ error: "Unauthorized" }`), do the work in a `try/catch` that returns `{ error }`, enforce subscription/free-tier limits, then call `revalidatePath` and return `{ data }`; board, card, comment, agent-token, label and list create/update/reorder/delete actions get the person actor from `getPersonActor()` and call the shared domain functions in `lib/domain/` (also used by the MCP route), which write the audit entry in the mutation transaction; list cloning still uses `auth()` and `createAuditLog`
 
 #### Route Structure
 - **Marketing pages**: `app/(marketing)/` - public landing pages

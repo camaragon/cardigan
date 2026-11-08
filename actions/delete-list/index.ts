@@ -1,18 +1,16 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
+import { getPersonActor } from "@/lib/domain/person";
 import { InputType, ReturnType } from "./types";
-import { db } from "@/lib/db";
+import { deleteList as mutate } from "@/lib/domain/deletes";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { DeleteList } from "./schema";
-import { createAuditLog } from "@/lib/create-audit-log";
-import { ACTION, ENTITY_TYPE } from "@prisma/client";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  const { userId, orgId } = await auth();
+  const actor = await getPersonActor();
 
-  if (!userId || !orgId) {
+  if (!actor) {
     return {
       error: "Unauthorized",
     };
@@ -22,22 +20,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   let list;
 
   try {
-    list = await db.list.delete({
-      where: {
-        id,
-        boardId,
-        board: {
-          orgId,
-        },
-      },
-    });
-
-    await createAuditLog({
-      entityTitle: list.title,
-      entityId: list.id,
-      entityType: ENTITY_TYPE.LIST,
-      action: ACTION.DELETE,
-    });
+    list = await mutate(actor, { id, boardId });
   } catch {
     return {
       error: "Failed to delete list",
