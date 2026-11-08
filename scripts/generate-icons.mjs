@@ -33,14 +33,25 @@ const favicon = mark.replace(
 );
 await writeFile(new URL("favicon.svg", output), favicon);
 
-// Raster fallbacks use the light mark on white, readable on any browser chrome.
+// A thin light outline keeps the fixed-color fallback readable on dark tabs.
+const rasterMark = mark.replace(
+  /<path\b.*<\/svg>/s,
+  `${paths(mark).replace(/stroke="[^"]+"/g, 'stroke="#fafafa"').replace(/stroke-width="6"/g, 'stroke-width="8"')}${paths(mark)}</svg>`,
+);
 const raster = (size) =>
-  sharp(Buffer.from(mark))
+  sharp(Buffer.from(rasterMark))
     .resize(size, size)
-    .flatten({ background: "#ffffff" })
     .png()
     .toBuffer();
-await writeFile(new URL("apple-touch-icon.png", output), await raster(180));
+// iOS needs an opaque background for touch icons.
+await writeFile(
+  new URL("apple-touch-icon.png", output),
+  await sharp(Buffer.from(mark))
+    .resize(180, 180)
+    .flatten({ background: "#ffffff" })
+    .png()
+    .toBuffer(),
+);
 
 // ICO directory entries point to PNG images rendered from the same SVG source.
 const sizes = [16, 32, 48];
