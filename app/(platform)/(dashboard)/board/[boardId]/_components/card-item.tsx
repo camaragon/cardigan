@@ -14,9 +14,14 @@ import { useCardModal } from "@/hooks/use-card-modal";
 interface CardItemProps {
   data: ListWithCards["cards"][number];
   index: number;
+  isDragDisabled?: boolean;
 }
 
-export const CardItem = ({ data, index }: CardItemProps) => {
+export const CardItem = ({
+  data,
+  index,
+  isDragDisabled = false,
+}: CardItemProps) => {
   const cardModal = useCardModal();
   const creator = [
     data.creatorName,
@@ -34,13 +39,18 @@ export const CardItem = ({ data, index }: CardItemProps) => {
     .toUpperCase();
 
   return (
-    <Draggable draggableId={data.id} index={index}>
+    <Draggable
+      draggableId={data.id}
+      index={index}
+      isDragDisabled={isDragDisabled}
+    >
       {(provided) => (
         <div
           {...provided.draggableProps}
           {...provided.dragHandleProps}
           ref={provided.innerRef}
           role="button"
+          tabIndex={0}
           onClick={() => cardModal.onOpen(data.id)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {

@@ -13,6 +13,12 @@ import {
 import { useAction } from "@/hooks/use-action";
 import { updateListOrder } from "@/actions/update-list-order";
 import { toast } from "sonner";
+import { BoardToolbar } from "./board-toolbar";
+import {
+  emptyBoardFilters,
+  hasBoardFilters,
+  matchesBoardFilters,
+} from "@/lib/board-filters";
 import { moveCard } from "@/actions/move-card";
 
 interface ListContainerProps {
@@ -29,6 +35,13 @@ const reorder = <T,>(list: T[], startIndex: number, endIndex: number): T[] => {
 
 export const ListContainer = ({ boardId, data }: ListContainerProps) => {
   const [orderedData, setOrderedData] = useState<ListWithCards[]>(data);
+
+  const [filters, setFilters] = useState(emptyBoardFilters);
+  const filtering = hasBoardFilters(filters);
+  const visibleData = orderedData.map((list) => ({
+    ...list,
+    cards: list.cards.filter((card) => matchesBoardFilters(card, filters)),
+  }));
 
   useEffect(() => {
     setOrderedData(data);
@@ -102,7 +115,7 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
   };
 
   const onDragEnd = ({ destination, source, type }: DropResult) => {
-    if (!destination) return;
+    if (!destination || filtering) return;
 
     const isSamePosition =
       destination.droppableId === source.droppableId &&
@@ -120,23 +133,44 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
   };
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="lists" type="list" direction="horizontal">
-        {(provided) => (
-          <ol
-            {...provided.droppableProps}
-            ref={provided.innerRef}
-            className="flex gap-x-3 h-full"
-          >
-            {orderedData.map((list, index) => (
-              <ListItem key={list.id} index={index} data={list} />
-            ))}
-            {provided.placeholder}
-            <ListForm />
-            <div className="flex-shrink-0 w-1" />
-          </ol>
-        )}
-      </Droppable>
-    </DragDropContext>
+    <>
+      <BoardToolbar
+        lists={orderedData}
+        filters={filters}
+        onChange={setFilters}
+      />
+      {filtering && (
+        <p
+          role="status"
+          className="mb-2 w-fit max-w-[calc(100vw-2rem)] rounded bg-black/60 px-2 py-1 text-xs text-white"
+        >
+          {visibleData.reduce((total, list) => total + list.cards.length, 0)}{" "}
+          matching cards. Dragging is paused while filters are active.
+        </p>
+      )}
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId="lists" type="list" direction="horizontal">
+          {(provided) => (
+            <ol
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="flex gap-x-3 h-full"
+            >
+              {visibleData.map((list, index) => (
+                <ListItem
+                  key={list.id}
+                  index={index}
+                  data={list}
+                  filtering={filtering}
+                />
+              ))}
+              {provided.placeholder}
+              <ListForm />
+              <div className="flex-shrink-0 w-1" />
+            </ol>
+          )}
+        </Droppable>
+      </DragDropContext>
+    </>
   );
 };

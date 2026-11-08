@@ -11,9 +11,10 @@ import { Draggable, Droppable } from "@hello-pangea/dnd";
 interface ListItemProps {
   data: ListWithCards;
   index: number;
+  filtering?: boolean;
 }
 
-export const ListItem = ({ data, index }: ListItemProps) => {
+export const ListItem = ({ data, index, filtering = false }: ListItemProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -29,7 +30,7 @@ export const ListItem = ({ data, index }: ListItemProps) => {
   };
 
   return (
-    <Draggable draggableId={data.id} index={index}>
+    <Draggable draggableId={data.id} index={index} isDragDisabled={filtering}>
       {(provided) => (
         <li
           {...provided.draggableProps}
@@ -38,7 +39,11 @@ export const ListItem = ({ data, index }: ListItemProps) => {
         >
           <div
             {...provided.dragHandleProps}
-            className="flex max-h-[calc(100dvh-9.5rem)] w-full flex-col rounded-md bg-[#f1f2f4] shadow-md pb-2"
+            className={cn(
+              filtering &&
+                "!max-h-[calc(100dvh-14.5rem)] sm:!max-h-[calc(100dvh-12rem)]",
+              "flex max-h-[calc(100dvh-12rem)] sm:max-h-[calc(100dvh-9.5rem)] w-full flex-col rounded-md bg-[#f1f2f4] shadow-md pb-2",
+            )}
           >
             <ListHeader data={data} onAddCardAction={enableEditing} />
             <Droppable droppableId={data.id} type="card">
@@ -52,7 +57,12 @@ export const ListItem = ({ data, index }: ListItemProps) => {
                   )}
                 >
                   {data.cards.map((card, index) => (
-                    <CardItem index={index} key={card.id} data={card} />
+                    <CardItem
+                      index={index}
+                      key={card.id}
+                      data={card}
+                      isDragDisabled={filtering}
+                    />
                   ))}
                   {provided.placeholder}
                 </ol>
