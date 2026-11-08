@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ListOptions } from "./list-options";
 
 interface ListHeaderProps {
-  data: List;
+  data: List & { cards: { id: string }[] };
   onAddCardAction: () => void;
 }
 
@@ -67,7 +67,7 @@ export const ListHeader = ({ data, onAddCardAction }: ListHeaderProps) => {
   useEventListener("keydown", onKeyDown);
 
   return (
-    <div className="pt-2 px-2 text-sm font-semibold flex justify-between items-start gap-x-2">
+    <div className="shrink-0 pt-2 px-2 text-sm font-semibold flex justify-between items-start gap-x-2">
       {isEditing ? (
         <form ref={formRef} action={onSubmit} className="flex-1 px-[2px]">
           <input hidden id="id" name="id" value={data.id} />
@@ -85,11 +85,17 @@ export const ListHeader = ({ data, onAddCardAction }: ListHeaderProps) => {
       ) : (
         <div
           onClick={enableEditing}
-          className="w-full text-sm px-2.5 py-1 h-7 font-medium border-transparent"
+          className="min-w-0 flex-1 truncate text-sm px-2.5 py-1 h-7 font-medium border-transparent"
         >
           {title}
         </div>
       )}
+      <span
+        aria-label={`${data.cards.length} cards`}
+        className="mt-1 rounded-full bg-black/5 px-1.5 text-xs font-medium tabular-nums text-neutral-500"
+      >
+        {data.cards.length}
+      </span>
       <ListOptions onAddCard={onAddCardAction} data={data} />
     </div>
   );
