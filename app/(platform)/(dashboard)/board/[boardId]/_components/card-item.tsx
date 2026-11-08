@@ -38,7 +38,7 @@ export const CardItem = ({ data, index }: CardItemProps) => {
               ))}
             </div>
           )}
-          <p className="truncate">{data.title}</p>
+          <p className="line-clamp-2 break-words">{data.title}</p>
         </div>
       )}
     </Draggable>
