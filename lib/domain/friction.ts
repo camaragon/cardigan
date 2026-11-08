@@ -6,6 +6,7 @@ import { writeComment } from "./comments";
 import { DomainError } from "./errors";
 import { keyedWrite } from "./keys";
 import { LIMITS } from "./limits";
+import { lockBoardOrder } from "./ordering";
 
 export const FRICTION_COMPONENTS = [
   "workspace",
@@ -181,6 +182,7 @@ export const reportFriction = async (
         throw new DomainError("unavailable", "The suggestion box is not configured");
       }
 
+      await lockBoardOrder(tx, list.boardId);
       const { card, fingerprint, status } = await fingerprintCard(
         tx,
         boxActor,
