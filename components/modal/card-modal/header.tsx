@@ -38,7 +38,7 @@ export const Header = ({ data }: HeaderProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onBlur = () => {
-    if (!conflict) inputRef.current?.form?.requestSubmit();
+    if (!conflict && !isLoading) inputRef.current?.form?.requestSubmit();
   };
 
   const onSubmit = async (formData: FormData) => {
