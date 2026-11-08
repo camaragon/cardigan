@@ -11,7 +11,7 @@ interface BoardNavbarProps {
 
 export const BoardNavbar = async ({ data }: BoardNavbarProps) => {
   return (
-    <div className="w-full h-14 z-[40] bg-black/50 fixed top-14 flex items-center px-3 sm:px-6 gap-x-2 sm:gap-x-4 text-white">
+    <div className="w-full h-24 grid grid-cols-[auto_minmax(0,1fr)_auto_auto] grid-rows-[3.5rem_2.5rem] sm:h-14 sm:flex z-[40] bg-black/50 fixed top-14 items-center px-3 sm:px-6 gap-x-2 sm:gap-x-4 text-white">
       <Link
         href={`/organization/${data.orgId}`}
         aria-label="Back to boards"
@@ -24,7 +24,11 @@ export const BoardNavbar = async ({ data }: BoardNavbarProps) => {
         <BoardTitleForm data={data} />
       </div>
       <BoardNotice boardId={data.id} notice={data.notice} />
-      <div className="ml-auto shrink-0">
+      <div
+        id="board-toolbar"
+        className="order-last col-span-4 flex w-full min-w-0 pb-2 sm:order-none sm:ml-auto sm:w-auto sm:pb-0"
+      />
+      <div className="ml-auto shrink-0 sm:ml-0">
         <BoardOptions id={data.id} />
       </div>
     </div>
