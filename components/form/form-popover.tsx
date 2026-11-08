@@ -105,12 +105,12 @@ export const FormPopover = ({
         side={side}
         sideOffset={sideOffset}
       >
-        <div className="text-sm font-medium text-center text-neutral-600 pb-4">
+        <div className="text-sm font-medium text-center text-foreground pb-4">
           {isCreateMode ? "Create board" : "Change background"}
         </div>
         <PopoverClose asChild ref={closeRef}>
           <Button
-            className="h-auto w-auto p-2 absolute top-2 right-2 text-neutral-600"
+            className="h-auto w-auto p-2 absolute top-2 right-2 text-foreground"
             variant="ghost"
           >
             <X className="h-4 w-4" />
@@ -131,7 +131,7 @@ export const FormPopover = ({
               <div className="space-y-1">
                 <label
                   htmlFor={templateId}
-                  className="text-xs font-semibold text-neutral-700"
+                  className="text-xs font-semibold text-foreground"
                 >
                   Template
                 </label>
@@ -139,7 +139,7 @@ export const FormPopover = ({
                   id={templateId}
                   name="template"
                   defaultValue="blank"
-                  className="block h-8 w-full rounded-md border bg-white px-2 text-sm text-neutral-900 focus-visible:outline-2 focus-visible:outline-blue-600"
+                  className="block h-8 w-full rounded-md border bg-background px-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   {Object.values(TEMPLATES).map((template) => (
                     <option key={template.key} value={template.key}>

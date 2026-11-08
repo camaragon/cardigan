@@ -95,7 +95,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-6">
-        <Loader2 className="h-6 w-6 text-sky-700 animate-spin" />
+        <Loader2 className="h-6 w-6 text-primary animate-spin" />
       </div>
     );
   }
@@ -162,7 +162,7 @@ export const FormPicker = ({ id, errors }: FormPickerProps) => {
         </div>
       )}
 
-      <div className="text-xs text-neutral-500 mb-2 flex items-center justify-center gap-1">
+      <div className="text-xs text-muted-foreground mb-2 flex items-center justify-center gap-1">
         Or choose from Unsplash
         {unsplash && (
           <Button

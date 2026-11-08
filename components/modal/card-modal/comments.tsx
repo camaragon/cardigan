@@ -43,21 +43,21 @@ export const Comments = ({ cardId, items }: CommentsProps) => {
 
   return (
     <div className="flex items-start gap-x-3 w-full">
-      <MessageSquare className="h-5 w-5 mt-0.5 text-neutral-700" />
+      <MessageSquare className="h-5 w-5 mt-0.5 text-foreground" />
       <div className="w-full">
-        <p className="font-semibold text-neutral-700 mb-2">Comments</p>
+        <p className="font-semibold text-foreground mb-2">Comments</p>
         <ol className="space-y-3 mb-3">
           {items.map((comment) => (
             <li key={comment.id} className="text-sm">
               <p className="text-xs text-muted-foreground">
-                <span className="font-semibold text-neutral-700">
+                <span className="font-semibold text-foreground">
                   {comment.actorName}
                 </span>{" "}
                 <ActorBadge kind={comment.actorKind} />{" "}
                 {comment.kind === "DUPLICATE" && "marked a duplicate · "}
                 {format(new Date(comment.createdAt), "MMM d, yyyy 'at' h:mm a")}
               </p>
-              <p className="whitespace-pre-wrap text-neutral-700">{comment.body}</p>
+              <p className="whitespace-pre-wrap text-foreground">{comment.body}</p>
             </li>
           ))}
         </ol>

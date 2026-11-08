@@ -55,7 +55,7 @@ export const TokenManager = ({ roles, tokens }: TokenManagerProps) => {
           <p className="font-medium">
             Copy the token for {secret.agentName} now. It will not be shown again.
           </p>
-          <code className="block break-all rounded bg-white p-2 text-xs">{secret.secret}</code>
+          <code className="block break-all rounded bg-muted p-2 text-xs">{secret.secret}</code>
           <div className="flex gap-x-2">
             <Button
               size="sm"
@@ -85,7 +85,7 @@ export const TokenManager = ({ roles, tokens }: TokenManagerProps) => {
           />
         </div>
         <div className="space-y-1 sm:w-40">
-          <label htmlFor="roleKey" className="block text-xs font-semibold text-neutral-700">
+          <label htmlFor="roleKey" className="block text-xs font-semibold text-foreground">
             Role
           </label>
           <select

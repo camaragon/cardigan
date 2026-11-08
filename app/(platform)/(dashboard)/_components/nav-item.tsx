@@ -73,8 +73,8 @@ export const NavItem = ({
       <AccordionTrigger
         onClick={() => onExpandAction(organization.id)}
         className={cn(
-          "flex items-center gap-x-2 p-1.5 text-neutral-700 rounded-md hover:bg-neutral-500/10 transition text-start no-underline hover:no-underline",
-          isActive && !isExpanded && "bg-sky-500/10 text-sky-700",
+          "flex items-center gap-x-2 p-1.5 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground transition text-start no-underline hover:no-underline",
+          isActive && !isExpanded && "bg-accent text-accent-foreground",
         )}
       >
         <div className="flex items-center gap-x-2">
@@ -89,7 +89,7 @@ export const NavItem = ({
           <p className="font-medium text-sm">{organization.name}</p>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="pt-1 text-neutral-700">
+      <AccordionContent className="pt-1 text-foreground">
         {routes
           .filter(
             (route) =>
@@ -105,7 +105,7 @@ export const NavItem = ({
                 className={cn(
                   "w-full font-normal justify-start pl-10 mb-1",
 
-                  pathname === route.href && "bg-sky-500/10 text-sky-700",
+                  pathname === route.href && "bg-accent text-accent-foreground",
                 )}
                 variant="ghost"
               >

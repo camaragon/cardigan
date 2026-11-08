@@ -51,7 +51,7 @@ export function BoardToolbar({ lists, filters, onChange }: BoardToolbarProps) {
   ];
   const creators = [...new Map(cards.map((card) => [creatorKey(card), card] as const)).entries()];
   const buttonClass =
-    "flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white";
+    "flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   if (!target) return null;
 
@@ -61,7 +61,7 @@ export function BoardToolbar({ lists, filters, onChange }: BoardToolbarProps) {
       aria-label="Search and filter cards"
       className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-initial"
     >
-      <div className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md bg-white/15 px-2.5 focus-within:ring-2 focus-within:ring-white sm:w-48">
+      <div className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md bg-white/15 px-2.5 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background sm:w-48">
         <Search aria-hidden="true" className="size-4 shrink-0" />
         <input
           ref={searchRef}
@@ -87,7 +87,7 @@ export function BoardToolbar({ lists, filters, onChange }: BoardToolbarProps) {
         <PopoverTrigger asChild>
           <button
             type="button"
-            className={`${buttonClass} ${hasBoardFilters(filters) ? "bg-white/20" : ""}`}
+            className={`${buttonClass} ${hasBoardFilters(filters) ? "bg-accent text-accent-foreground" : ""}`}
             aria-label="Filter cards"
           >
             <Filter aria-hidden="true" className="size-4" />

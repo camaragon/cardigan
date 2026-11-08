@@ -173,7 +173,7 @@ const MarketingPage = () => {
           <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <Button
               size="lg"
-              className="h-11 bg-sky-700 px-6 text-white hover:bg-sky-800"
+              className="h-11 bg-primary px-6 text-primary-foreground hover:bg-primary/90"
               asChild
             >
               <Link href="/sign-up">

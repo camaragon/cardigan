@@ -14,9 +14,9 @@ interface LabelsProps {
 export const Labels = ({ data }: LabelsProps) => {
   return (
     <div className="flex items-start gap-x-3 w-full">
-      <Tags className="h-5 w-5 mt-0.5 text-neutral-700" />
+      <Tags className="h-5 w-5 mt-0.5 text-foreground" />
       <div className="w-full">
-        <p className="font-semibold text-neutral-700 mb-2">Labels</p>
+        <p className="font-semibold text-foreground mb-2">Labels</p>
         <div className="flex flex-wrap gap-1 items-center">
           {data.labels.map((cardLabel) => (
             <LabelBadge

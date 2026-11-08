@@ -58,7 +58,7 @@ export const CardItem = ({
               cardModal.onOpen(data.id);
             }
           }}
-          className="shrink-0 border-2 border-transparent hover:border-black focus-visible:ring-2 focus-visible:ring-sky-600 py-2 px-3 text-sm bg-white rounded-md shadow-sm"
+          className="shrink-0 border-2 border-transparent hover:border-ring focus-visible:ring-2 focus-visible:ring-ring py-2 px-3 text-sm bg-board-card rounded-md shadow-sm"
         >
           {data.labels.length > 0 && (
             <div
@@ -68,7 +68,7 @@ export const CardItem = ({
               {data.labels.map((cardLabel) => (
                 <span
                   key={cardLabel.id}
-                  className="inline-flex max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium text-neutral-900"
+                  className="inline-flex max-w-full items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium text-neutral-900 dark:text-neutral-100"
                   style={{ backgroundColor: `${cardLabel.label.color}26` }}
                 >
                   <span
@@ -82,7 +82,7 @@ export const CardItem = ({
             </div>
           )}
           <p className="line-clamp-2 break-words">{data.title}</p>
-          <div className="mt-2 flex items-center gap-2.5 text-xs text-neutral-500">
+          <div className="mt-2 flex items-center gap-2.5 text-xs text-muted-foreground">
             {data.description && (
               <span title="Has description" aria-label="Has description">
                 <AlignLeft aria-hidden="true" className="size-3" />

@@ -25,9 +25,9 @@ export const ProModal = () => {
   return (
     <Dialog open={proModal.isOpen} onOpenChange={proModal.onClose}>
       <DialogContent className="max-w-md p-0 overflow-hidden">
-        <div className="text-neutral-700 mx-auto space-y-6 p-6">
+        <div className="text-foreground mx-auto space-y-6 p-6">
           <DialogTitle>Upgrade to Cardigan Pro Today!</DialogTitle>
-          <p className="text-xs font-semibold text-neutral-600">
+          <p className="text-xs font-semibold text-foreground">
             Explore the best of Cardigan
           </p>
           <div className="pl-3">

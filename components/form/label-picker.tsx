@@ -159,12 +159,12 @@ export const LabelPicker = ({
     <Popover onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent className="w-72 p-3" side="bottom" align="start">
-        <div className="text-sm font-medium text-center text-neutral-600 pb-3">
+        <div className="text-sm font-medium text-center text-foreground pb-3">
           {editingLabel ? "Edit label" : "Labels"}
         </div>
         <PopoverClose asChild>
           <Button
-            className="h-auto w-auto p-2 absolute top-2 right-2 text-neutral-600"
+            className="h-auto w-auto p-2 absolute top-2 right-2 text-foreground"
             variant="ghost"
           >
             <X className="h-4 w-4" />
@@ -175,12 +175,12 @@ export const LabelPicker = ({
           <>
             <div className="space-y-1 max-h-60 overflow-y-auto">
               {orgLabels?.length === 0 && (
-              <p className="text-xs text-neutral-500 text-center py-2">No labels yet</p>
+              <p className="text-xs text-muted-foreground text-center py-2">No labels yet</p>
             )}
             {orgLabels?.map((label) => (
                 <div
                   key={label.id}
-                  className="flex items-center gap-1 p-1 rounded-sm hover:bg-neutral-100"
+                  className="flex items-center gap-1 p-1 rounded-sm hover:bg-accent hover:text-accent-foreground"
                 >
                   <button
                     onClick={() => onToggleLabel(label.id)}
@@ -196,15 +196,15 @@ export const LabelPicker = ({
                       </span>
                     </div>
                     {assignedLabelIds.has(label.id) && (
-                      <Check className="h-4 w-4 text-neutral-700 shrink-0" />
+                      <Check className="h-4 w-4 text-foreground shrink-0" />
                     )}
                   </button>
                   <button
                     onClick={() => onEditLabel(label)}
-                    className="p-1 rounded-sm hover:bg-neutral-200 shrink-0"
+                    className="p-1 rounded-sm hover:bg-accent hover:text-accent-foreground shrink-0"
                     aria-label={`Edit ${label.name}`}
                   >
-                    <Pencil className="h-3.5 w-3.5 text-neutral-500" />
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                   </button>
                 </div>
               ))}
@@ -245,7 +245,7 @@ export const LabelPicker = ({
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Label name..."
               autoComplete="off"
-              className="w-full text-sm border rounded-sm px-2 py-1.5 outline-none focus:ring-1 focus:ring-sky-600"
+              className="w-full text-sm border rounded-sm px-2 py-1.5 outline-none focus:ring-1 focus:ring-ring"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") {

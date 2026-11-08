@@ -77,7 +77,7 @@ export function BoardNotice({
           ref={triggerRef}
           type="button"
           aria-label={notice ? "Board notice" : "Add notice"}
-          className="flex min-w-0 max-w-24 sm:max-w-56 shrink items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs text-white hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white"
+          className="flex min-w-0 max-w-24 sm:max-w-56 shrink items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs text-white hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           onPointerEnter={(event) => {
             if (event.pointerType === "mouse") {
               keepOpen();

@@ -25,7 +25,7 @@ export const Navbar = () => {
           </Button>
           <Button
             size="sm"
-            className="bg-sky-700 text-white hover:bg-sky-800"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
             asChild
           >
             <Link href="/sign-up">Get started</Link>

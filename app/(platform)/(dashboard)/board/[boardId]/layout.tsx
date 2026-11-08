@@ -55,7 +55,7 @@ const BoardIdLayout = async ({
 
   return (
     <div
-      className="board-canvas relative h-full w-max min-w-full bg-no-repeat bg-cover bg-center"
+      className="board-canvas bg-board-surface relative h-full w-max min-w-full bg-no-repeat bg-cover bg-center"
       style={{ backgroundImage: `url(${board.imageFullUrl})` }}
     >
       <BoardNavbar data={board} />

@@ -15,7 +15,7 @@ export const BoardNavbar = async ({ data }: BoardNavbarProps) => {
       <Link
         href={`/organization/${data.orgId}`}
         aria-label="Back to boards"
-        className="flex shrink-0 items-center gap-1.5 rounded-md p-2 text-sm hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white"
+        className="flex shrink-0 items-center gap-1.5 rounded-md p-2 text-sm text-white hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         <span className="hidden sm:inline">Boards</span>
