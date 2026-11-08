@@ -12,5 +12,6 @@ export const UpdateBoard = z.object({
     })
     .optional(),
   image: z.string().optional(),
+  notice: z.string().trim().max(2000).optional(),
   id: z.string(),
 });
