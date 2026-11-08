@@ -23,6 +23,10 @@ model Board {
 	imageFullUrl	String @db.Text
 	imageUserName	String @db.Text
 	imageLinkHTML	String @db.Text
+	// Record of origin only; see ADR 0006.
+	template		String @default("blank")
+	// Short guidance on how work flows on the board, seeded by the template.
+	notice			String? @db.Text
 
 	lists			List[]
 
