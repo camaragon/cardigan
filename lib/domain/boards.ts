@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
-import { Actor, isAgent } from "./actor";
+import { Actor, isAgent, requirePerson } from "./actor";
 import { transaction, writeAudit } from "./audit";
 import { DomainError } from "./errors";
 import { BoardTemplate, BoardTemplateKey, TEMPLATES } from "./templates";
@@ -99,4 +99,61 @@ export const describeWorkspace = async (actor: Actor) => {
     boards,
     labels,
   };
+};
+
+export const updateBoard = async (actor: Actor, input: { id: string; title?: string; image?: string; notice?: string }) => {
+  requirePerson(actor);
+  const { id, title, image, notice } = input;
+  // Build update data object
+  const updateData: {
+    title?: string;
+    notice?: string | null;
+    imageId?: string;
+    imageThumbUrl?: string;
+    imageFullUrl?: string;
+    imageLinkHTML?: string;
+    imageUserName?: string;
+  } = {};
+
+  if (notice !== undefined) updateData.notice = notice || null;
+
+  if (title) {
+    updateData.title = title;
+  }
+
+  if (image) {
+    const [imageId, imageThumbUrl, imageFullUrl, imageLinkHTML, imageUserName] =
+      image.split("|");
+
+    if (imageId === "uploaded") {
+      // For uploaded images, use the data URL as both thumb and full URL
+      updateData.imageId = `uploaded-${Date.now()}`;
+      updateData.imageThumbUrl = imageThumbUrl;
+      updateData.imageFullUrl = imageFullUrl;
+      updateData.imageLinkHTML = "";
+      updateData.imageUserName = "Custom Upload";
+    } else {
+      // For Unsplash images, validate all fields are present
+      if (
+        !imageId ||
+        !imageThumbUrl ||
+        !imageFullUrl ||
+        !imageLinkHTML ||
+        !imageUserName
+      ) {
+        throw new DomainError("invalid", "Missing image fields. Failed to update board");
+      }
+      updateData.imageId = imageId;
+      updateData.imageThumbUrl = imageThumbUrl;
+      updateData.imageFullUrl = imageFullUrl;
+      updateData.imageLinkHTML = imageLinkHTML;
+      updateData.imageUserName = imageUserName;
+    }
+  }
+
+  return transaction(async (tx) => {
+    const board = await tx.board.update({ where: { id, orgId: actor.orgId }, data: updateData });
+    await writeAudit(tx, actor, { action: ACTION.UPDATE, entityType: ENTITY_TYPE.BOARD, entityId: board.id, entityTitle: board.title });
+    return board;
+  });
 };
