@@ -1,25 +1,53 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Comment } from "@prisma/client";
 import { format } from "date-fns";
-import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { addComment } from "@/actions/add-comment";
-import { ActorBadge } from "@/components/actor-badge";
+import { Button } from "@/components/ui/button";
 import { FormSubmit } from "@/components/form/form-submit";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAction } from "@/hooks/use-action";
 
 interface CommentsProps {
-  cardId: string;
   items: Comment[];
 }
 
-export const Comments = ({ cardId, items }: CommentsProps) => {
+export const Comments = ({ items }: CommentsProps) => {
+  const [showEarlier, setShowEarlier] = useState(false);
+  const visible = showEarlier ? items : items.slice(-3);
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-neutral-700">Comments</h3>
+        {items.length > 3 && (
+          <Button variant="ghost" size="sm" onClick={() => setShowEarlier(!showEarlier)} aria-expanded={showEarlier}>
+            {showEarlier ? "Hide earlier comments" : `Show ${items.length - 3} earlier comments`}
+          </Button>
+        )}
+      </div>
+      {items.length === 0 && <p className="text-sm text-muted-foreground">No comments yet.</p>}
+      <ol className="space-y-3">
+        {visible.map((comment) => (
+          <li key={comment.id} className="text-sm">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-neutral-700">{comment.actorName}</span>{" · "}
+              {format(new Date(comment.createdAt), "MMM d, h:mm a")}
+              {comment.kind === "DUPLICATE" && " · marked a duplicate"}
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-neutral-700">{comment.body}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+};
+
+export const CommentForm = ({ cardId }: { cardId: string }) => {
   const params = useParams();
   const queryClient = useQueryClient();
   const formRef = useRef<HTMLFormElement>(null);
@@ -42,36 +70,16 @@ export const Comments = ({ cardId, items }: CommentsProps) => {
   };
 
   return (
-    <div className="flex items-start gap-x-3 w-full">
-      <MessageSquare className="h-5 w-5 mt-0.5 text-neutral-700" />
-      <div className="w-full">
-        <p className="font-semibold text-neutral-700 mb-2">Comments</p>
-        <ol className="space-y-3 mb-3">
-          {items.map((comment) => (
-            <li key={comment.id} className="text-sm">
-              <p className="text-xs text-muted-foreground">
-                <span className="font-semibold text-neutral-700">
-                  {comment.actorName}
-                </span>{" "}
-                <ActorBadge kind={comment.actorKind} />{" "}
-                {comment.kind === "DUPLICATE" && "marked a duplicate · "}
-                {format(new Date(comment.createdAt), "MMM d, yyyy 'at' h:mm a")}
-              </p>
-              <p className="whitespace-pre-wrap text-neutral-700">{comment.body}</p>
-            </li>
-          ))}
-        </ol>
-        <form ref={formRef} action={onSubmit} className="space-y-2">
-          <FormTextarea
-            id="body"
-            className="w-full"
-            placeholder="Write a comment..."
-            errors={fieldErrors}
-          />
-          <FormSubmit>Comment</FormSubmit>
-        </form>
-      </div>
-    </div>
+    <form ref={formRef} action={onSubmit} className="flex items-end gap-3">
+      <label htmlFor="body" className="sr-only">Comment</label>
+      <FormTextarea
+        id="body"
+        className="h-16 [field-sizing:fixed] w-full"
+        placeholder="Write a comment…"
+        errors={fieldErrors}
+      />
+      <FormSubmit>Comment</FormSubmit>
+    </form>
   );
 };
 

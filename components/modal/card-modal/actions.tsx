@@ -1,9 +1,10 @@
 "use client";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CardWithList } from "@/types";
-import { Copy, Trash } from "lucide-react";
+import { Copy, MoreHorizontal, Trash } from "lucide-react";
 import { useAction } from "@/hooks/use-action";
 import { cloneCard } from "@/actions/clone-card";
 import { deleteCard } from "@/actions/delete-card";
@@ -62,29 +63,37 @@ export const Actions = ({ data }: ActionsProps) => {
   };
 
   return (
-    <div className="space-y-2 mt-2">
-      <p className="text-xs font-semibold">Actions</p>
-      <Button
-        onClick={onClone}
-        disabled={isLoadingClone}
-        variant="gray"
-        className="w-full justify-start"
-        size="inline"
-      >
-        <Copy className="h-4 w-4 mr-2" />
-        Clone
-      </Button>
-      <Button
-        onClick={onDelete}
-        disabled={isLoadingDelete}
-        variant="gray"
-        className="w-full justify-start"
-        size="inline"
-      >
-        <Trash className="h-4 w-4 mr-2" />
-        Delete
-      </Button>
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Card actions">
+          <MoreHorizontal aria-hidden="true" className="size-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-40 space-y-1 p-1">
+        <Button
+          onClick={onClone}
+          disabled={isLoadingClone}
+          variant="ghost"
+          className="w-full justify-start"
+          size="inline"
+        >
+          <Copy aria-hidden="true" className="h-4 w-4 mr-2" />
+          Clone
+        </Button>
+        <Button
+          onClick={() => {
+            if (window.confirm("Delete this card? This cannot be undone.")) onDelete();
+          }}
+          disabled={isLoadingDelete}
+          variant="ghost"
+          className="w-full justify-start"
+          size="inline"
+        >
+          <Trash aria-hidden="true" className="h-4 w-4 mr-2" />
+          Delete
+        </Button>
+      </PopoverContent>
+    </Popover>
   );
 };
 
