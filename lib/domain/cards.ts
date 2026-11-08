@@ -62,8 +62,18 @@ export const compactCard = (card: CardWithContext) => ({
 
 const lastActor = async (orgId: string, cardId: string) => {
   const entry = await db.auditLog.findFirst({
-    where: { orgId, entityId: cardId, outcome: OUTCOME.OK },
-    orderBy: { createdAt: "desc" },
+    where: {
+      orgId, entityId: cardId, entityType: ENTITY_TYPE.CARD, outcome: OUTCOME.OK,
+      OR: [
+        { action: { in: [ACTION.CREATE, ACTION.UPDATE] } },
+        { action: ACTION.MOVE, NOT: { fromListId: { equals: db.auditLog.fields.toListId } } },
+      ],
+    },
+    orderBy: [
+      { eventId: { sort: "desc", nulls: "last" } },
+      { createdAt: "desc" },
+      { id: "desc" },
+    ],
   });
   return entry
     ? {
@@ -389,9 +399,9 @@ const getCardActivity = async (
       orgId: actor.orgId,
       outcome: OUTCOME.OK,
       OR: [{ entityId: cardId }, { cardId }],
-      ...(options.before ? { eventId: { lt: options.before } } : {}),
+      eventId: options.before ? { lt: options.before } : { not: null },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { eventId: "desc" },
     take: Math.min(options.limit ?? 10, LIMITS.page),
   });
 
@@ -402,14 +412,31 @@ const getCardActivity = async (
 export const getCard = async (
   actor: Actor,
   cardId: string,
-  options: { activityLimit?: number; activityBefore?: number } = {},
+  options: { activityLimit?: number; activityBefore?: number; commentCursor?: string } = {},
 ) => {
   const card = await loadCard(db, actor, cardId);
+  let after: { createdAt: Date; id: string } | undefined;
+  if (options.commentCursor !== undefined) {
+    try {
+      const [at, id] = JSON.parse(Buffer.from(options.commentCursor, "base64url").toString());
+      if (typeof at !== "string" || typeof id !== "string" || !id ||
+          !Number.isFinite(Date.parse(at))) throw new Error();
+      after = { createdAt: new Date(at), id };
+    } catch {
+      throw new DomainError("invalid", "commentCursor must be a value from commentNextCursor");
+    }
+  }
   const [comments, key, activity] = await Promise.all([
     db.comment.findMany({
-      where: { cardId: card.id },
-      orderBy: { createdAt: "asc" },
-      take: LIMITS.page,
+      where: {
+        cardId: card.id,
+        ...(after ? { OR: [
+          { createdAt: { gt: after.createdAt } },
+          { createdAt: after.createdAt, id: { gt: after.id } },
+        ] } : {}),
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      take: LIMITS.page + 1,
     }),
     db.externalKey.findFirst({
       where: { orgId: actor.orgId, entityId: card.id, entityType: "CARD" },
@@ -419,6 +446,9 @@ export const getCard = async (
       before: options.activityBefore,
     }),
   ]);
+  const commentPage = comments.slice(0, LIMITS.page);
+  const lastComment = commentPage.at(-1);
+  const commentHasMore = comments.length > LIMITS.page;
 
   return {
     ...compactCard(card),
@@ -430,7 +460,7 @@ export const getCard = async (
       surface: card.creatorSurface,
       externalKey: key?.key ?? null,
     },
-    comments: comments.map((c) => ({
+    comments: commentPage.map((c) => ({
       id: c.id,
       kind: c.kind,
       body: c.body,
@@ -438,6 +468,10 @@ export const getCard = async (
       actor: { kind: c.actorKind, name: c.actorName, surface: c.surface },
       createdAt: c.createdAt.toISOString(),
     })),
+    commentHasMore,
+    commentNextCursor: commentHasMore && lastComment
+      ? Buffer.from(JSON.stringify([lastComment.createdAt.toISOString(), lastComment.id])).toString("base64url")
+      : null,
     activity,
   };
 };
