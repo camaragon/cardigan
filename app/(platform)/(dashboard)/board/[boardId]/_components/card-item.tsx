@@ -49,7 +49,7 @@ export const CardItem = ({ data, index }: CardItemProps) => {
               cardModal.onOpen(data.id);
             }
           }}
-          className="shrink-0 border-2 border-transparent hover:border-black focus-visible:ring-2 focus-visible:ring-sky-600 py-2 px-3 text-sm bg-white rounded-md shadow-sm"
+          className="shrink-0 border-2 border-transparent hover:border-black focus-visible:ring-2 focus-visible:ring-sky-600 py-2 px-3 text-sm bg-white text-neutral-950 rounded-md shadow-sm"
         >
           {data.labels.length > 0 && (
             <div
