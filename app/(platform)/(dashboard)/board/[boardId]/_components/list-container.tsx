@@ -1,8 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { ListWithCards } from "@/types";
 import { ListForm } from "./list-form";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useTransition } from "react";
 import { ListItem } from "./list-item";
 import {
   DragDropContext,
@@ -35,7 +36,12 @@ const reorder = <T,>(list: T[], startIndex: number, endIndex: number): T[] => {
 };
 
 export const ListContainer = ({ boardId, data }: ListContainerProps) => {
-  const [orderedData, setOrderedData] = useState<ListWithCards[]>(data);
+  const router = useRouter();
+  const snapshot = useRef<ListWithCards[] | null>(null);
+  const [isOrdering, startOrdering] = useTransition();
+  const [optimisticData, setOrderedData] = useState<ListWithCards[]>(data);
+
+  const orderedData = isOrdering ? optimisticData : data;
 
   const [filters, setFilters] = useState(emptyBoardFilters);
   const filtering = hasBoardFilters(filters);
@@ -45,27 +51,37 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
   }));
 
   useEffect(() => {
-    setOrderedData(data);
-  }, [data]);
+    if (!isOrdering) snapshot.current = null;
+  }, [isOrdering]);
+
+  const submitOrder = (next: ListWithCards[], execute: () => Promise<void>) => {
+    // The ref also blocks a second drop before React renders the pending state.
+    if (snapshot.current) return;
+    snapshot.current = orderedData;
+    setOrderedData(next);
+    startOrdering(async () => {
+      await execute();
+      router.refresh();
+    });
+  };
+
+  const rollback = (error: string) => {
+    if (snapshot.current) setOrderedData(snapshot.current);
+    toast.error(error);
+  };
 
   const { execute: executeUpdateListOrder } = useAction(updateListOrder, {
     onSuccess: () => {
       toast.success("List reordered");
     },
-    onError: (error) => {
-      toast.error(error);
-    },
+    onError: rollback,
   });
 
   const { execute: executeMoveCard } = useAction(moveCard, {
     onSuccess: () => {
       toast.success("Card moved");
     },
-    onError: (error) => {
-      // Refused: snap back to the order the server sent.
-      setOrderedData(data);
-      toast.error(error);
-    },
+    onError: rollback,
   });
 
   const handleCardMove = (
@@ -73,8 +89,7 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
     source: DraggableLocation,
     destination: DraggableLocation,
   ) => {
-    // Copy the lists and cards before splicing so `data` keeps the server's
-    // order for a snap-back.
+    // Keep the pre-drag snapshot intact for a rejected move.
     const newOrderedData = orderedData.map((list) => ({
       ...list,
       cards: [...list.cards],
@@ -102,14 +117,13 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
       listId: destinationList.id,
     });
 
-    setOrderedData(newOrderedData);
     // One drag is one audited single-card move (PRD C-6).
-    executeMoveCard({
+    submitOrder(newOrderedData, () => executeMoveCard({
       id: movedCard.id,
       boardId,
       toListId: destinationList.id,
       position,
-    });
+    }));
   };
 
   const handleListReorder = (
@@ -120,12 +134,11 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
       (list, index) => ({ ...list, order: index }),
     );
 
-    setOrderedData(lists);
-    executeUpdateListOrder({ boardId, lists });
+    submitOrder(lists, () => executeUpdateListOrder({ boardId, lists }));
   };
 
   const onDragEnd = ({ draggableId, destination, source, type }: DropResult) => {
-    if (!destination) return;
+    if (!destination || snapshot.current) return;
 
     const isSamePosition =
       destination.droppableId === source.droppableId &&
@@ -172,6 +185,7 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
                   index={index}
                   data={list}
                   filtering={filtering}
+                  isOrdering={isOrdering}
                 />
               ))}
               {provided.placeholder}
