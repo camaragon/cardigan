@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { ActionState, FieldErrors } from "@/lib/create-safe-action";
+import { useState, useCallback, useRef } from "react";
+import { ActionState } from "@/lib/create-safe-action";
 
 type Action<TInput, TOutput> = (
   data: TInput,
@@ -15,35 +15,41 @@ export const useAction = <TInput, TOutput>(
   action: Action<TInput, TOutput>,
   options: UseActionOptions<TOutput> = {},
 ) => {
-  const [fieldErrors, setFieldErrors] = useState<
-    FieldErrors<TInput> | undefined
-  >(undefined);
-  const [error, setError] = useState<string | undefined>(undefined);
-  const [data, setData] = useState<TOutput | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [result, setResult] = useState<ActionState<TInput, TOutput>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const pending = useRef(0);
+  const latestRequest = useRef(0);
 
   const execute = useCallback(
     async (input: TInput) => {
+      const request = ++latestRequest.current;
+      pending.current++;
+      setResult({});
       setIsLoading(true);
 
       try {
-        const result = await action(input);
-
-        if (!result) return;
-
-        setFieldErrors(result.fieldErrors);
-
-        if (result.error) {
-          setError(result.error);
-          options.onError?.(result.error);
+        let outcome: ActionState<TInput, TOutput>;
+        try {
+          outcome = await action(input);
+        } catch (cause) {
+          outcome = { error: cause instanceof Error ? cause.message : "Something went wrong" };
         }
 
-        if (result.data) {
-          setData(result.data);
-          options.onSuccess?.(result.data);
+        if (!outcome) return;
+
+        // Only the newest invocation owns the displayed outcome.
+        if (outcome.fieldErrors) {
+          if (request === latestRequest.current) setResult({ fieldErrors: outcome.fieldErrors });
+        } else if (outcome.error) {
+          if (request === latestRequest.current) setResult({ error: outcome.error });
+          options.onError?.(outcome.error);
+        } else if ("data" in outcome) {
+          if (request === latestRequest.current) setResult({ data: outcome.data });
+          options.onSuccess?.(outcome.data as TOutput);
         }
       } finally {
-        setIsLoading(false);
+        pending.current--;
+        setIsLoading(pending.current > 0);
         options.onComplete?.();
       }
     },
@@ -52,9 +58,9 @@ export const useAction = <TInput, TOutput>(
 
   return {
     execute,
-    fieldErrors,
-    error,
-    data,
+    fieldErrors: result.fieldErrors,
+    error: result.error ?? undefined,
+    data: result.data,
     isLoading,
   };
 };
