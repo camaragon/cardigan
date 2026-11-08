@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
 import { Actor, requirePerson } from "./actor";
 import { transaction, writeAudit } from "./audit";
@@ -54,5 +55,46 @@ export const reorderLists = async (actor: Actor, input: { boardId: string; lists
     }
     await writeAudit(tx, actor, { action: ACTION.UPDATE, entityType: ENTITY_TYPE.BOARD, entityId: board.id, entityTitle: board.title });
     return lists;
+  });
+};
+
+export const cloneList = async (actor: Actor, input: { id: string; boardId: string }) => {
+  requirePerson(actor);
+  return transaction(async (tx) => {
+    await lockBoardOrder(tx, input.boardId);
+    const source = await tx.list.findUnique({
+      where: { id: input.id, boardId: input.boardId, board: { orgId: actor.orgId } },
+      include: { cards: { orderBy: [{ order: "asc" }, { id: "asc" }], include: { labels: true } } },
+    });
+    if (!source) throw notFound("List");
+    const last = await tx.list.findFirst({ where: { boardId: source.boardId }, orderBy: { order: "desc" } });
+    // Allocate ids alongside each source so label copies never depend on return order.
+    const copies = source.cards.map((card, order) => ({ source: card, id: randomUUID(), order }));
+    const list = await tx.list.create({
+      data: {
+        boardId: source.boardId,
+        title: `${source.title} - Clone`,
+        order: last ? last.order + 1 : 1,
+        cards: {
+          createMany: {
+            data: copies.map(({ source: card, id, order }) => ({
+              id, order, title: card.title, description: card.description,
+              creatorKind: actor.kind, creatorId: actor.id,
+              creatorName: actor.name, creatorSurface: actor.surface,
+            })),
+          },
+        },
+      },
+      include: { cards: true },
+    });
+    const labels = copies.flatMap(({ source: card, id }) =>
+      card.labels.map(({ labelId }) => ({ cardId: id, labelId })),
+    );
+    if (labels.length) await tx.cardLabel.createMany({ data: labels });
+    await writeAudit(tx, actor, {
+      action: ACTION.CREATE, entityType: ENTITY_TYPE.LIST,
+      entityId: list.id, entityTitle: list.title,
+    });
+    return list;
   });
 };
