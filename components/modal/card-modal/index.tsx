@@ -74,7 +74,9 @@ export const CardModal = () => {
           event.preventDefault();
           (event.target as HTMLElement).querySelector<HTMLButtonElement>('[data-slot="dialog-close"]')?.focus();
         }}
-        className="flex h-dvh max-h-dvh w-full max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 sm:h-[680px] sm:max-h-[calc(100dvh-2rem)] sm:w-[720px] sm:max-w-[calc(100vw-2rem)] sm:rounded-xl"
+        className={readError
+          ? "flex max-h-[calc(100dvh-2rem)] w-[480px] flex-col gap-0 overflow-hidden p-0"
+          : "flex h-dvh max-h-dvh w-full max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 sm:h-[680px] sm:max-h-[calc(100dvh-2rem)] sm:w-[720px] sm:max-w-[calc(100vw-2rem)] sm:rounded-xl"}
       >
         <VisuallyHidden>
           <DialogTitle>{cardData?.title ?? "Card"}</DialogTitle>
