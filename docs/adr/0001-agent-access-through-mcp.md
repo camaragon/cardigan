@@ -5,6 +5,8 @@ functions with no internal REST layer for now, and the write-only suggestion box
 Amended by [ADR 0005](0005-card-claims-and-owner-answers.md) for claims and
 owner answers; the source reference is now one of a card's external references.
 Amended on 2026-11-05 for how the entry points are written (see the end).
+Amended by [ADR 0006](0006-templates-are-starting-points.md): there are no list
+rules, and any workspace's agent token may file friction reports.
 
 ## Context
 

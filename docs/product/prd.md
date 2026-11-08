@@ -3,9 +3,10 @@
 - Status: approved
 - Approval record: owner, 2026-11-04. Amendments A-1 to A-4, the build order and
   the agent surface principles: approved by the owner, 2026-11-04.
-- Maintainer: owner · Updated: 2026-11-04
+- Maintainer: owner · Updated: 2026-11-08
 - Decided by the owner: direct shared domain functions for the UI and MCP, no internal REST layer for now ([ADR 0001](../adr/0001-agent-access-through-mcp.md)); a write-only suggestion box for friction reports (C-9).
-- Decisions: [agent access](../adr/0001-agent-access-through-mcp.md), [private deployment](../adr/0002-private-deployment.md), [backlog stays authoritative during transition](../adr/0003-backlog-authoritative-during-transition.md), [workflow rules as templates and settings](../adr/0004-workflow-rules-in-templates.md), [card claims and owner answers](../adr/0005-card-claims-and-owner-answers.md)
+- Decisions: [agent access](../adr/0001-agent-access-through-mcp.md), [private deployment](../adr/0002-private-deployment.md), [backlog stays authoritative during transition](../adr/0003-backlog-authoritative-during-transition.md), [workflow rules as templates and settings](../adr/0004-workflow-rules-in-templates.md) (superseded), [card claims and owner answers](../adr/0005-card-claims-and-owner-answers.md), [templates are starting points](../adr/0006-templates-are-starting-points.md)
+- Board templates: [board templates PRD](board-templates.md) (draft) replaces the product template, C-8 and P-1 to P-5.
 
 ## Problem and why now
 
@@ -32,10 +33,9 @@ input to its own improvement.
   queue that several agents pull from without colliding (A-2, ADR 0005).
 - **Questions in the app:** a card can carry an open question that the owner
   answers in Cardigan, and agents see the answer through the changes query (A-1).
-- **Templates:** each board starts from a template. The plain template has To do,
-  Doing and Done, one general agent role and no list rules. The product template
-  adds product management. Workflow rules and board guidance are settings, not
-  core code (ADR 0004).
+- **Templates:** optional starting points that seed a board's lists, labels and
+  notice; the board is then fully customizable and enforces no workflow
+  ([board templates PRD](board-templates.md), ADR 0006).
 
 Non-goals:
 
@@ -48,11 +48,10 @@ Non-goals:
 
 Two agents work outside Cardigan: a supervisor agent that executes work from its own
 backlog (an external task list with opaque task ids) and a product manager (PM)
-agent that proposes and grooms work. An agent holds one token per workspace. A
-product board has Proposed, Queued, In flight, Waiting on owner and Done; lists deny
-by default and ADR 0004 lists every allowed move. Queued order is the owner's
-priority order. Waiting on owner holds cards with an open question for the owner,
-who answers it in Cardigan (A-1).
+agent that proposes and grooms work. An agent holds one token per workspace. The
+enforced product board planned here is replaced by the Product management template
+in the [board templates PRD](board-templates.md): suggested lists and labels, with
+no enforced rules, template roles or one-per-workspace limit (ADR 0006).
 
 ## Suggestion box
 
@@ -67,9 +66,8 @@ The MCP tools (C-2, ADR 0001) follow these principles; criteria S-1 to S-6 test
 them.
 
 - **Self-describing workspace:** one describe tool returns everything an agent needs
-  to cold-start on any workspace with no per-project prompt: boards, lists with
-  their rules and notices, the board notice, labels, and the agent's own role and
-  capabilities.
+  to cold-start on any workspace with no per-project prompt: boards, lists in
+  order, the board notice, labels, and the agent's own role and capabilities.
 - **Denials that teach:** a rule denial names the rule, who may perform the action,
   and an allowed alternative. The error is the onboarding.
 - **Token-cheap reads:** list results are compact by default; get-card returns
@@ -96,20 +94,19 @@ Each step is one or two PRs and builds on the one before.
 2. **Agent tokens and a minimal MCP server on plain boards** (C-1, C-2, C-4, S-1 to
    S-4). The owner's agents use it daily for at least a week before step 4.
 3. **Card structure and claims** (A-2, ADR 0005).
-4. **Templates, list rules, agent roles and the suggestion box** (ADR 0004, C-8,
-   C-9, P-1 to P-5, A-4).
+4. **Board templates and the suggestion box** ([board templates PRD](board-templates.md),
+   ADR 0006, C-9, A-4).
 5. **In-app questions and answers** (A-1), then webhooks, markdown import and export
    (S-5) and full-text search (S-6), in the order daily use demands.
 
 ## Success
 
 The owner sets targets after a baseline of the first four weeks after cutover.
-From the activity log: cycle time on plain boards (first entry to Doing until first
-entry to Done); on product boards, proposal-to-decision time and the share queued
-versus declined; failed MCP calls per agent per day; friction reports filed,
-repeated, and occurring again after a fix shipped; time from a question being asked
+From the activity log: cycle time (first move out of a board's first list until
+first entry to its last list); failed MCP calls per agent per day; friction
+reports filed, repeated, and occurring again after a fix shipped; time from a question being asked
 to its answer. Risks and their mitigations are in the Consequences of ADRs 0001,
-0002, 0004 and 0005.
+0002, 0005 and 0006.
 
 ## Acceptance criteria: core
 
@@ -140,11 +137,9 @@ are recorded by hand.
   target list and position.
 - **C-7 Changes query:** paging from any cursor while other events are written
   returns every event id exactly once, in order.
-- **C-8 Rules from settings:** a list's entry, edit, reorder and exit settings and
-  its notice, and the board notice, come from the board's template, are shown in
-  workspace settings, and are enforced for every actor in the UI and MCP. On a
-  plain-template board any member or agent may create in and move cards to any list.
-- **C-9 Suggestion box:** as a narrow, write-only exception to C-1, any product
+- **C-8 Templates:** replaced by the acceptance criteria in the
+  [board templates PRD](board-templates.md); no board enforces list rules.
+- **C-9 Suggestion box:** as a narrow, write-only exception to C-1, any
   workspace's agent token can file a friction report into Cardigan's Suggestion box
   list and learns only whether it was new or a repeat; it cannot read there. Resubmitting a report key changes
   nothing; reports beyond ADR 0001's size, field and rate limits are refused.
@@ -159,12 +154,12 @@ are recorded by hand.
 ## Acceptance criteria: agent surface
 
 - **S-1 Describe:** with a fresh token and no other input, the describe tool returns
-  the workspace's boards, each board's notice, its lists with their rules and
-  notices, its labels, and the calling agent's role and capabilities.
+  the workspace's boards, each board's notice, its lists in order, its labels,
+  and the calling agent's role and capabilities.
 - **S-2 Denials that teach:** every rule denial returns a typed error naming the
   rule, the actors allowed to perform the action and at least one allowed
-  alternative (for example: only the owner may move to Queued; comment on the card
-  to request it).
+  alternative (for example: another agent holds the claim; comment on the card
+  instead).
 - **S-3 Compact reads:** list and search results return only id, title, list,
   labels, assignee, claim holder, version and updated time unless more fields are
   requested; get-card returns description, labels, comments, references, claim,
@@ -187,8 +182,7 @@ Approved by the owner on 2026-11-04.
   open question on it. Only the owner can answer it, in the app, as a comment of kind
   `answer` that closes the question; agents cannot write `answer` comments. The
   answer appears in the changes query attributed to the owner, and get-card shows
-  the question with its answer. On the product template, Waiting on owner is the
-  list that holds such cards.
+  the question with its answer.
 - **A-2 Assignee, claims and card structure:** a card has an optional assignee, a
   person member or an agent token of the same workspace. A claim is atomic: when two
   agents claim the same unclaimed card at once, exactly one succeeds and the other
@@ -203,27 +197,11 @@ Approved by the owner on 2026-11-04.
   a cycle. ADR 0001's source reference is stored as one of these references.
 - **A-3 Short text:** a title or description of one character is accepted for every
   actor, in the UI and MCP; an empty title is still rejected.
-- **A-4 Board guidance:** each template supplies a short board notice describing how
-  work flows on that board; it is shown on the board and returned by the describe
-  tool. Agents cannot change it.
+- **A-4 Board guidance:** a board may carry a short notice describing how work
+  flows on it, seeded by its template and editable by people; it is shown on the
+  board and returned by the describe tool. Agents cannot change it.
 
 ## Acceptance criteria: product template
 
-- **P-1 Setup:** a board from the product template has the five lists, the Declined
-  label, the PM and supervisor roles, the ADR 0004 rules and a board notice, all
-  shown as settings; a workspace has at most one product board. Cardigan's board
-  also has the Suggestion box list.
-- **P-2 Approval:** only the owner may create a card in, move a card into, reorder,
-  or edit a card in Queued or In flight. A card reaches In flight only from Queued;
-  no agent can create a card in In flight or Done. Denied attempts change no card or
-  list.
-- **P-3 Roles:** PM tokens may create cards only in Proposed, update and mark
-  duplicates among Proposed cards, and comment on any card. Among agents, only
-  supervisor tokens move Queued to In flight and In flight to Done, claim cards,
-  and create or edit Waiting on owner cards keyed by backlog task id and question
-  number.
-- **P-4 Waiting on owner:** the list's notice tells the owner to answer on the card;
-  only the supervisor agent creates or edits its cards; the owner answers their
-  questions in the app (A-1); the supervisor agent or the owner moves them to Done.
-- **P-5 Approval visible:** after the owner queues a proposal, the changes query
-  returns that move attributed to the owner.
+P-1 to P-5 are superseded by the [board templates PRD](board-templates.md) and
+ADR 0006: there is no enforced product workflow.

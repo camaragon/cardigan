@@ -1,6 +1,8 @@
 # The supervisor's backlog stays authoritative for execution during transition
 
-Status: proposed
+Status: proposed. Amended by [ADR 0006](0006-templates-are-starting-points.md):
+there is no product template, so the split applies to whichever board the
+supervisor agent works from, and list names such as Queued are conventions.
 
 ## Context
 
