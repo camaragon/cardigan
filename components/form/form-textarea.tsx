@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, KeyboardEventHandler } from "react";
+import { forwardRef, KeyboardEventHandler, ChangeEventHandler } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,8 @@ interface FormTextareaProps {
   onClick?: () => void;
   onKeyDown?: KeyboardEventHandler<HTMLTextAreaElement | undefined>;
   defaultValue?: string;
+  value?: string;
+  onChange?: ChangeEventHandler<HTMLTextAreaElement>;
 }
 
 export const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
@@ -35,6 +37,8 @@ export const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
       onKeyDown,
       className,
       defaultValue,
+      value,
+      onChange,
     },
     ref,
   ) => {
@@ -67,6 +71,8 @@ export const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
             )}
             aria-describedby={`${id}-error`}
             defaultValue={defaultValue}
+            value={value}
+            onChange={onChange}
           ></Textarea>
           <FormErrors id={id} errors={errors} />
         </div>
