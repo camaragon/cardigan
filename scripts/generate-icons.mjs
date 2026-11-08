@@ -1,61 +1,50 @@
 import { readFile, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 
-// Keep the approved geometry and colors in docs/brand/logo-concepts unchanged.
-const source = new URL("../docs/brand/logo-concepts/stitch/", import.meta.url);
+// The public mark and outlined lockups are the approved logo sources.
 const output = new URL("../public/", import.meta.url);
-const assets = {
-  "mark-light.svg": "logo.svg",
-  "mark-dark.svg": "logo-dark.svg",
-  "lockup-light.svg": "logo-lockup.svg",
-  "lockup-dark.svg": "logo-lockup-dark.svg",
-};
-for (const [input, filename] of Object.entries(assets)) {
-  await writeFile(
-    new URL(filename, output),
-    await readFile(new URL(input, source)),
-  );
-}
+const mark = await readFile(new URL("logo.svg", output), "utf8");
+const paths = mark.match(/<g\b.*<\/g>/s)[0];
+const svg = (content) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">${content}</svg>`;
+const smallMark = (size) =>
+  paths
+    .replace('stroke-width="5.5"', `stroke-width="${size === 16 ? 7.5 : size === 32 ? 7 : 5.5}"`)
+    .replace("#3AA0DE", size === 16 ? "#0A5C94" : "#3AA0DE");
 
-const mark = await readFile(new URL("mark-light.svg", source), "utf8");
-const darkMark = await readFile(new URL("mark-dark.svg", source), "utf8");
-// SVG favicons follow the browser's color scheme independently of page theme.
-const paths = (svg) => svg.match(/<path\b[^>]*\/>/g).join("");
-const favicon = mark.replace(
-  /<path\b.*<\/svg>/s,
-  `<style>
-    .dark { display: none; }
+// SVG image media queries use the rendered viewport, including favicon size.
+await writeFile(
+  new URL("favicon.svg", output),
+  svg(`<style>
+    svg { --sky: #3AA0DE; --blue: #0A5C94; }
+    g { stroke-width: 5.5; }
+    @media (max-width: 40px) { g { stroke-width: 7; } }
     @media (prefers-color-scheme: dark) {
-      .light { display: none; }
-      .dark { display: inline; }
+      svg { --sky: #5DB7EE; --blue: #FFFFFF; }
     }
-  </style><g class="light">${paths(mark)}</g><g class="dark">${paths(darkMark)}</g></svg>`,
+    @media (max-width: 16px) {
+      svg { --sky: var(--blue); }
+      g { stroke-width: 7.5; }
+    }
+  </style>${paths.replace("#3AA0DE", "var(--sky)").replace("#0A5C94", "var(--blue)")}`),
 );
-await writeFile(new URL("favicon.svg", output), favicon);
 
-// A thin light outline keeps the fixed-color fallback readable on dark tabs.
-const rasterMark = mark.replace(
-  /<path\b.*<\/svg>/s,
-  `${paths(mark).replace(/stroke="[^"]+"/g, 'stroke="#fafafa"').replace(/stroke-width="6"/g, 'stroke-width="8"')}${paths(mark)}</svg>`,
-);
-const raster = (size) =>
-  sharp(Buffer.from(rasterMark))
-    .resize(size, size)
-    .png()
-    .toBuffer();
-// iOS needs an opaque background for touch icons.
+// iOS supplies the icon mask; keep the source square and opaque.
 await writeFile(
   new URL("apple-touch-icon.png", output),
-  await sharp(Buffer.from(mark))
+  await sharp(Buffer.from(svg(
+    `<path fill="#0A5C94" d="M0 0H48V48H0Z"/><g transform="translate(6.75 6.75) scale(0.71875)">${paths.replace("#3AA0DE", "#A8DBF8").replace("#0A5C94", "#FFFFFF")}</g>`,
+  )))
     .resize(180, 180)
-    .flatten({ background: "#ffffff" })
     .png()
     .toBuffer(),
 );
 
-// ICO directory entries point to PNG images rendered from the same SVG source.
+// ICO directory entries point to PNG images, with size-specific strokes.
 const sizes = [16, 32, 48];
-const images = await Promise.all(sizes.map(raster));
+const images = await Promise.all(sizes.map((size) =>
+  sharp(Buffer.from(svg(smallMark(size)))).resize(size, size).png().toBuffer(),
+));
 const directory = Buffer.alloc(6 + 16 * sizes.length);
 directory.writeUInt16LE(1, 2);
 directory.writeUInt16LE(sizes.length, 4);
