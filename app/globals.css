@@ -127,30 +127,31 @@ body {
 }
 
 /* Window horizontal scrolling avoids unsupported nested drag scroll containers.
-   Reuse the card editor's thin, rounded scrollbar for the board and its lists. */
+   Slim, rounded scrollbars for the board and its lists: a mid-gray thumb on a faint
+   dark track stays legible over light photos, dark photos and the black columns. */
 :is(html:has(.board-canvas), .board-scrollbar) {
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-color: rgb(150 150 150 / 65%) rgb(0 0 0 / 25%);
 }
 :is(html:has(.board-canvas), .board-scrollbar):is(:hover, :focus-within) {
-  scrollbar-color: rgb(115 115 115 / 45%) transparent;
+  scrollbar-color: rgb(190 190 190 / 90%) rgb(0 0 0 / 30%);
 }
 :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
+}
+:is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-button {
+  display: none;
 }
 :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-track,
 :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-corner {
-  background: transparent;
+  background: rgb(0 0 0 / 25%);
+  border-radius: 999px;
 }
 :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: rgb(150 150 150 / 65%);
   border-radius: 999px;
 }
 :is(html:has(.board-canvas), .board-scrollbar):is(:hover, :focus-within)::-webkit-scrollbar-thumb {
-  background: rgb(115 115 115 / 45%);
-}
-@media (hover: none) {
-  :is(html:has(.board-canvas), .board-scrollbar) { scrollbar-color: rgb(115 115 115 / 45%) transparent; }
-  :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-thumb { background: rgb(115 115 115 / 45%); }
+  background: rgb(190 190 190 / 90%);
 }
