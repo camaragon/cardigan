@@ -1,13 +1,13 @@
 import { ACTION, COMMENT_KIND, ENTITY_TYPE } from "@prisma/client";
-import { db } from "@/lib/db";
 import { Actor, keyScope } from "./actor";
 import { Tx, writeAudit } from "./audit";
 import { loadCard, requireCapability } from "./cards";
-import { DomainError } from "./errors";
+import { DomainError, isDomainError } from "./errors";
 import { keyedWrite } from "./keys";
 
 interface CommentInput {
   cardId: string;
+  /** Comment text, or the caller's duplicate note before its reference is rendered. */
   body: string;
   kind: COMMENT_KIND;
   duplicateOfCardId?: string;
@@ -53,6 +53,7 @@ const keyedComment = (actor: Actor, input: CommentInput) =>
     scope: keyScope(actor),
     key: input.externalKey,
     payload: {
+      ...(input.kind === COMMENT_KIND.DUPLICATE ? { intentVersion: 2 } : {}),
       cardId: input.cardId,
       body: input.body,
       kind: input.kind,
@@ -60,15 +61,51 @@ const keyedComment = (actor: Actor, input: CommentInput) =>
     },
     entityType: ENTITY_TYPE.COMMENT,
     tokenId: actor.tokenId,
-    replay: (tx, commentId) =>
-      tx.comment.findUniqueOrThrow({ where: { id: commentId } }),
+    legacyPayload: input.kind === COMMENT_KIND.DUPLICATE ? async (tx, commentId) => {
+      const comment = await tx.comment.findFirst({ where: { id: commentId, orgId: actor.orgId } });
+      if (!comment) throw new DomainError("not_found", "Original comment target no longer exists");
+      // Old receipts hashed the generated body; use the stored title, never today's title.
+      const reference = `" (${input.duplicateOfCardId})`;
+      const titleEnd = comment.body.indexOf(reference);
+      if (comment.cardId !== input.cardId || comment.kind !== COMMENT_KIND.DUPLICATE ||
+          comment.duplicateOfCardId !== input.duplicateOfCardId ||
+          !comment.body.startsWith('Duplicate of "') || titleEnd < 0 ||
+          titleEnd !== comment.body.lastIndexOf(reference) ||
+          comment.body.slice(titleEnd + reference.length) !== (input.body ? `: ${input.body}` : "")) {
+        return undefined;
+      }
+      return {
+        cardId: input.cardId, body: comment.body, kind: input.kind,
+        duplicateOfCardId: input.duplicateOfCardId,
+      };
+    } : undefined,
+    replay: async (tx, commentId) => {
+      const comment = await tx.comment.findFirst({ where: { id: commentId, orgId: actor.orgId } });
+      if (!comment) throw new DomainError("not_found", "Original comment target no longer exists");
+      if (input.duplicateOfCardId) {
+        try {
+          await loadCard(tx, actor, input.duplicateOfCardId);
+        } catch (error) {
+          if (isDomainError(error) && error.type === "not_found") {
+            throw new DomainError("not_found", "Original canonical card no longer exists");
+          }
+          throw error;
+        }
+      }
+      return comment;
+    },
     write: async (tx) => {
       const card = await loadCard(tx, actor, input.cardId);
       requireCapability(
         actor,
         input.kind === COMMENT_KIND.DUPLICATE ? "duplicate" : "comment",
       );
-      const comment = await writeComment(tx, actor, card, input);
+      let body = input.body;
+      if (input.duplicateOfCardId) {
+        const canonical = await loadCard(tx, actor, input.duplicateOfCardId);
+        body = `Duplicate of "${canonical.title}" (${canonical.id})${input.body ? `: ${input.body}` : ""}`;
+      }
+      const comment = await writeComment(tx, actor, card, { ...input, body });
       return { entityId: comment.id, result: comment };
     },
   }).then(({ result, created }) => ({ comment: result, created }));
@@ -95,14 +132,11 @@ export const markDuplicate = async (
   if (input.cardId === input.canonicalCardId) {
     throw new DomainError("invalid", "A card cannot duplicate itself");
   }
-  const canonical = await loadCard(db, actor, input.canonicalCardId);
   return keyedComment(actor, {
     cardId: input.cardId,
-    body: `Duplicate of "${canonical.title}" (${canonical.id})${
-      input.note ? `: ${input.note}` : ""
-    }`,
+    body: input.note || "",
     kind: COMMENT_KIND.DUPLICATE,
-    duplicateOfCardId: canonical.id,
+    duplicateOfCardId: input.canonicalCardId,
     externalKey: input.externalKey,
   });
 };
