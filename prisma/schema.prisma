@@ -102,7 +102,7 @@ model Comment {
 }
 
 // Retry-safe external keys for creates and comments, unique per workspace and
-// key scope (the agent role, or the person). See ADR 0001.
+// key scope (the agent role, the person, or a friction scope). See ADR 0001.
 model ExternalKey {
 	id			String @id @default(uuid())
 	orgId		String
@@ -112,6 +112,8 @@ model ExternalKey {
 	entityType	ENTITY_TYPE
 	entityId	String
 	tokenId		String?
+	// Stored result for keys whose replay must return the original answer.
+	result		Json?
 
 	createdAt	DateTime @default(now())
 
@@ -199,6 +201,7 @@ enum ENTITY_TYPE {
 	LABEL
 	COMMENT
 	AGENT_TOKEN
+	FRICTION
 }
 
 enum ACTOR_KIND {

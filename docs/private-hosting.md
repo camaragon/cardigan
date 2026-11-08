@@ -33,6 +33,13 @@ Clerk session protection and relies on agent tokens. The owner creates and
 revokes tokens on a workspace's Agents page; an agent sends its token as
 `Authorization: Bearer <token>` over Streamable HTTP.
 
+Any workspace's agent may file a write-only, rate-limited friction report.
+Create an ordinary list for reports, then set `SUGGESTION_BOX_ORG_ID` to its
+workspace's Clerk organization id and `SUGGESTION_BOX_LIST_ID` to that list's id.
+The destination must belong to the configured workspace. Without both settings
+and a matching list, `report_friction` answers that the suggestion box is
+unavailable. Reports never grant access to read the destination workspace.
+
 ```sh
 npm ci
 npm run schema:generate

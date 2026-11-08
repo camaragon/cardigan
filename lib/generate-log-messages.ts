@@ -6,6 +6,9 @@ export const generateLogMessages = (log: AuditLog) => {
   if (log.outcome === OUTCOME.FAILED) {
     return `failed a call to ${log.tool ?? "a tool"} (${log.errorType ?? "error"})`;
   }
+  if (entityType === ENTITY_TYPE.FRICTION) {
+    return `filed a friction report (${entityTitle})`;
+  }
   if (entityType === ENTITY_TYPE.AGENT_TOKEN) {
     return action === ACTION.REVOKE
       ? `revoked the agent token for ${entityTitle}`
