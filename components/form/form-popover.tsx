@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { FormPicker } from "./form-picker";
-import { useRef } from "react";
+import { useId, useRef } from "react";
+import { BoardTemplateKey, TEMPLATES } from "@/lib/domain/templates";
 import { useRouter } from "next/navigation";
 import { useProModal } from "@/hooks/use-pro-modal";
 
@@ -36,6 +37,7 @@ export const FormPopover = ({
   mode = "create",
   boardId,
 }: FormPopoverProps) => {
+  const templateId = useId();
   const proModal = useProModal();
   const router = useRouter();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -81,7 +83,8 @@ export const FormPopover = ({
 
     if (mode === "create") {
       const title = formData.get("title") as string;
-      executeCreate({ title, image });
+      const template = (formData.get("template") ?? "blank") as BoardTemplateKey;
+      executeCreate({ title, image, template });
     } else {
       if (!boardId) {
         toast.error("Board ID is required for update");
@@ -123,6 +126,28 @@ export const FormPopover = ({
                 type="text"
                 errors={fieldErrors}
               />
+            )}
+            {isCreateMode && (
+              <div className="space-y-1">
+                <label
+                  htmlFor={templateId}
+                  className="text-xs font-semibold text-neutral-700"
+                >
+                  Template
+                </label>
+                <select
+                  id={templateId}
+                  name="template"
+                  defaultValue="blank"
+                  className="block h-8 w-full rounded-md border bg-white px-2 text-sm text-neutral-900 focus-visible:outline-2 focus-visible:outline-blue-600"
+                >
+                  {Object.values(TEMPLATES).map((template) => (
+                    <option key={template.key} value={template.key}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
           <FormSubmit className="w-full">

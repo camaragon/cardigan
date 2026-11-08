@@ -18,17 +18,20 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     };
   }
 
-  const { title, image, id } = data;
+  const { title, image, notice, id } = data;
 
   // Build update data object
   const updateData: {
     title?: string;
+    notice?: string | null;
     imageId?: string;
     imageThumbUrl?: string;
     imageFullUrl?: string;
     imageLinkHTML?: string;
     imageUserName?: string;
   } = {};
+
+  if (notice !== undefined) updateData.notice = notice || null;
 
   if (title) {
     updateData.title = title;
