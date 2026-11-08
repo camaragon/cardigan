@@ -4,7 +4,6 @@ import { LabelBadge } from "@/components/ui/label-badge";
 import { LabelPicker } from "@/components/form/label-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CardWithListAndLabels } from "@/types";
-import { Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface LabelsProps {
@@ -14,14 +13,13 @@ interface LabelsProps {
 export const Labels = ({ data }: LabelsProps) => {
   return (
     <div className="flex items-start gap-x-3 w-full">
-      <Tags className="h-5 w-5 mt-0.5 text-neutral-700" />
       <div className="w-full">
-        <p className="font-semibold text-neutral-700 mb-2">Labels</p>
-        <div className="flex flex-wrap gap-1 items-center">
+        <div className="flex gap-1 items-center overflow-x-auto overscroll-contain">
           {data.labels.map((cardLabel) => (
             <LabelBadge
               key={cardLabel.id}
               label={cardLabel.label}
+              className="shrink-0"
               size="md"
               showName
             />
@@ -30,8 +28,8 @@ export const Labels = ({ data }: LabelsProps) => {
             cardId={data.id}
             assignedLabels={data.labels}
           >
-            <Button variant="ghost" size="sm" className="h-6 text-xs">
-              +
+            <Button variant="ghost" size="sm" className="h-6 shrink-0 text-xs" aria-label="Add label">
+              + Label
             </Button>
           </LabelPicker>
         </div>

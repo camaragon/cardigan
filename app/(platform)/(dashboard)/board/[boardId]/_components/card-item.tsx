@@ -1,7 +1,7 @@
 "use client";
 
 import { ListWithCards } from "@/types";
-import { AlignLeft, Bot, MessageSquare } from "lucide-react";
+import { AlignLeft, MessageSquare } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import {
   Tooltip,
@@ -18,13 +18,7 @@ interface CardItemProps {
 
 export const CardItem = ({ data, index }: CardItemProps) => {
   const cardModal = useCardModal();
-  const creator = [
-    data.creatorName,
-    data.creatorKind === "AGENT" ? "Agent" : "Person",
-    data.creatorSurface,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const creator = data.creatorName;
   const initials = data.creatorName
     ?.trim()
     .split(/\s+/)
@@ -99,18 +93,14 @@ export const CardItem = ({ data, index }: CardItemProps) => {
                 (_, unit: string) => (unit === "month" ? "mo" : unit[0]),
               )}
             </time>
-            {(data.creatorKind === "AGENT" || initials) && (
+            {initials && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span
                     aria-label={`Created by ${creator}`}
-                    className={`flex size-[22px] shrink-0 items-center justify-center text-[10px] font-semibold ${data.creatorKind === "AGENT" ? "rounded-md bg-slate-800 text-white" : "rounded-full bg-emerald-600 text-white"}`}
+                    className="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-semibold text-white"
                   >
-                    {data.creatorKind === "AGENT" ? (
-                      <Bot aria-hidden="true" className="size-3.5" />
-                    ) : (
-                      initials
-                    )}
+                    {initials}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>Created by {creator}</TooltipContent>

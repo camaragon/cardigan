@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CardWithList } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlignLeft } from "lucide-react";
 import { useParams } from "next/navigation";
-import { RefObject, useRef, useState } from "react";
+import { RefObject, useEffect, useRef, useState } from "react";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { useAction } from "@/hooks/use-action";
 import { updateCard } from "@/actions/update-card";
@@ -22,6 +21,19 @@ export const Description = ({ data }: DescriptionProps) => {
   const queryClient = useQueryClient();
   const params = useParams();
   const [isEditing, setIsEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [isClamped, setIsClamped] = useState(false);
+  const previewRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const preview = previewRef.current;
+    if (!preview || expanded) return;
+    const observer = new ResizeObserver(() => {
+      setIsClamped(preview.scrollHeight > preview.clientHeight);
+    });
+    observer.observe(preview);
+    return () => observer.disconnect();
+  }, [data.description, isEditing, expanded]);
 
   const formRef = useRef<HTMLFormElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -73,14 +85,21 @@ export const Description = ({ data }: DescriptionProps) => {
 
   return (
     <div className="flex items-start gap-x-3 w-full">
-      <AlignLeft className="h5 w-5 mt-0.5 text-neutral-700" />
       <div className="w-full">
-        <p className="font-semibold text-neutral-700 mb-2">Description</p>
+        <div className="mb-2 flex min-h-7 items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-neutral-700">Description</h3>
+          {!isEditing && (isClamped || expanded) && (
+            <Button variant="ghost" size="sm" className="h-7" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+              {expanded ? "Show less" : "Show full description"}
+            </Button>
+          )}
+        </div>
         {isEditing ? (
           <form action={onSubmit} ref={formRef}>
             <FormTextarea
               id="description"
-              className="w-full mt-2 mb-2 max-h-[40vh] overflow-y-auto"
+              label="Edit description"
+              className="w-full mt-2 mb-2 min-h-40 [field-sizing:fixed]"
               placeholder="Add a more detailed description"
               defaultValue={data.description ?? undefined}
               errors={fieldErrors}
@@ -99,12 +118,17 @@ export const Description = ({ data }: DescriptionProps) => {
             </div>
           </form>
         ) : (
-          <div
-            onClick={enableEditing}
-            role="button"
-            className="min-h-[78px] max-h-[40vh] overflow-y-auto overscroll-contain bg-neutral-200 text-sm font-medium py-3 px-3.5 rounded-md whitespace-pre-wrap [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-1 [&::-webkit-scrollbar-thumb]:bg-neutral-400 [&::-webkit-scrollbar-thumb]:rounded-full"
-          >
-            {data.description || "Add a more detailed description..."}
+          <div>
+            <button
+              type="button"
+              onClick={enableEditing}
+              aria-label="Edit description"
+              className="w-full rounded-md text-left text-sm leading-5 text-neutral-700 focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <span ref={previewRef} className={`whitespace-pre-wrap ${expanded ? "block" : "line-clamp-6"}`}>
+                {data.description || "Add a more detailed description…"}
+              </span>
+            </button>
           </div>
         )}
       </div>

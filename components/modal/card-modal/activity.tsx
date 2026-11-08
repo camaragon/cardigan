@@ -3,7 +3,7 @@
 import { ActivityItem } from "@/components/activity-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AuditLog } from "@prisma/client";
-import { ActivityIcon } from "lucide-react";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 interface ActivityProps {
   items: AuditLog[];
@@ -11,17 +11,17 @@ interface ActivityProps {
 
 export const Activity = ({ items }: ActivityProps) => {
   return (
-    <div className="flex items-start gap-x-3 w-full">
-      <ActivityIcon className="h-5 w-5 mt-0.5 text-neutral-700" />
-      <div className="w-full">
-        <p className="font-semibold text-neutral-700 mb-2">Activity</p>
-        <ol className="mt-2 space-y-4">
-          {items.map((item) => (
-            <ActivityItem key={item.id} data={item} />
-          ))}
-        </ol>
-      </div>
-    </div>
+    <Accordion type="single" collapsible className="border-t">
+      <AccordionItem value="activity">
+        <AccordionTrigger className="py-3 text-neutral-700">Activity</AccordionTrigger>
+        <AccordionContent>
+          <ol className="space-y-4">
+            {items.map((item) => <ActivityItem key={item.id} data={item} actorBadge={null} />)}
+          </ol>
+          {items.length === 0 && <p className="text-muted-foreground">No activity yet.</p>}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 };
 
