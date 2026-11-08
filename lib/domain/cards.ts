@@ -5,6 +5,7 @@ import { transaction, Tx, writeAudit } from "./audit";
 import { denied, DomainError, notFound } from "./errors";
 import { keyedWrite } from "./keys";
 import { LIMITS } from "./limits";
+import { lockBoardOrder } from "./ordering";
 
 const cardWithContext = {
   list: true,
@@ -89,6 +90,8 @@ const staleVersion = async (actor: Actor, cardId: string) => {
 };
 
 export const nextOrder = async (tx: Tx, listId: string) => {
+  const list = await tx.list.findUniqueOrThrow({ where: { id: listId } });
+  await lockBoardOrder(tx, list.boardId);
   const last = await tx.card.findFirst({
     where: { listId },
     orderBy: { order: "desc" },
@@ -225,8 +228,9 @@ export interface MoveCardInput {
  */
 export const moveCard = async (actor: Actor, input: MoveCardInput) => {
   const result = await transaction(async (tx) => {
-    const card = await loadCard(tx, actor, input.cardId);
     const target = await loadList(tx, actor, input.toListId);
+    await lockBoardOrder(tx, target.boardId);
+    const card = await loadCard(tx, actor, input.cardId);
     if (target.boardId !== card.list.boardId) {
       throw new DomainError("invalid", "Cards move only within their board");
     }
@@ -238,7 +242,7 @@ export const moveCard = async (actor: Actor, input: MoveCardInput) => {
     const sameList = target.id === card.listId;
     const siblings = await tx.card.findMany({
       where: { listId: target.id, NOT: { id: card.id } },
-      orderBy: { order: "asc" },
+      orderBy: [{ order: "asc" }, { id: "asc" }],
       select: { id: true, order: true },
     });
     const position = Math.max(
@@ -263,7 +267,7 @@ export const moveCard = async (actor: Actor, input: MoveCardInput) => {
     if (!sameList) {
       const remaining = await tx.card.findMany({
         where: { listId: card.listId },
-        orderBy: { order: "asc" },
+        orderBy: [{ order: "asc" }, { id: "asc" }],
         select: { id: true, order: true },
       });
       await renumber(
@@ -457,7 +461,7 @@ export const listCards = async (
       ...(options.listId ? { listId: options.listId } : {}),
     },
     include: cardWithContext,
-    orderBy: [{ list: { order: "asc" } }, { order: "asc" }],
+    orderBy: [{ list: { order: "asc" } }, { listId: "asc" }, { order: "asc" }, { id: "asc" }],
     skip: offset,
     take: limit + 1,
   });

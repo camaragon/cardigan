@@ -2,7 +2,8 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { InputType, ReturnType } from "./types";
-import { db } from "@/lib/db";
+import { transaction } from "@/lib/domain/audit";
+import { lockBoardOrder } from "@/lib/domain/ordering";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { CloneList } from "./schema";
@@ -22,78 +23,84 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   let list;
 
   try {
-    const listToClone = await db.list.findUnique({
-      where: {
-        id,
-        boardId,
-        board: {
-          orgId,
-        },
-      },
-      include: {
-        cards: {
-          include: {
-            labels: true,
+    list = await transaction(async (tx) => {
+      await lockBoardOrder(tx, boardId);
+      const listToClone = await tx.list.findUnique({
+        where: {
+          id,
+          boardId,
+          board: {
+            orgId,
           },
         },
-      },
-    });
-
-    if (!listToClone) {
-      return {
-        error: "List not found",
-      };
-    }
-
-    const lastList = await db.list.findFirst({
-      where: {
-        boardId,
-      },
-      orderBy: {
-        order: "desc",
-      },
-    });
-
-    const newOrder = lastList ? lastList.order + 1 : 1;
-
-    list = await db.list.create({
-      data: {
-        boardId: listToClone.boardId,
-        title: `${listToClone.title} - Clone`,
-        order: newOrder,
-        cards: {
-          createMany: {
-            data: listToClone.cards.map((card) => ({
-              title: card.title,
-              description: card.description,
-              order: card.order,
-            })),
+        include: {
+          cards: {
+            orderBy: [{ order: "asc" }, { id: "asc" }],
+            include: {
+              labels: true,
+            },
           },
         },
-      },
-      include: {
-        cards: true,
-      },
-    });
+      });
 
-    // Copy labels from original cards to cloned cards
-    // Sort both arrays by order to align by index (createMany preserves insertion order)
-    const sortedOriginals = [...listToClone.cards].sort((a, b) => a.order - b.order);
-    const sortedClones = [...list.cards].sort((a, b) => a.order - b.order);
+      if (!listToClone) {
+        return null;
+      }
 
-    const labelRecords: { cardId: string; labelId: string }[] = [];
-    for (let i = 0; i < sortedClones.length; i++) {
-      const originalCard = sortedOriginals[i];
-      if (originalCard && originalCard.labels.length > 0) {
-        for (const cl of originalCard.labels) {
-          labelRecords.push({ cardId: sortedClones[i].id, labelId: cl.labelId });
+      const lastList = await tx.list.findFirst({
+        where: {
+          boardId,
+        },
+        orderBy: {
+          order: "desc",
+        },
+      });
+
+      const newOrder = lastList ? lastList.order + 1 : 1;
+
+      const created = await tx.list.create({
+        data: {
+          boardId: listToClone.boardId,
+          title: `${listToClone.title} - Clone`,
+          order: newOrder,
+          cards: {
+            createMany: {
+              data: listToClone.cards.map((card, order) => ({
+                title: card.title,
+                description: card.description,
+                order,
+              })),
+            },
+          },
+        },
+        include: {
+          cards: true,
+        },
+      });
+
+      // Copy labels from original cards to cloned cards
+      // Clones have unique positions matching the ordered source array.
+      const sortedOriginals = listToClone.cards;
+      const sortedClones = [...created.cards].sort((a, b) => a.order - b.order);
+
+      const labelRecords: { cardId: string; labelId: string }[] = [];
+      for (let i = 0; i < sortedClones.length; i++) {
+        const originalCard = sortedOriginals[i];
+        if (originalCard && originalCard.labels.length > 0) {
+          for (const cl of originalCard.labels) {
+            labelRecords.push({ cardId: sortedClones[i].id, labelId: cl.labelId });
+          }
         }
       }
-    }
 
-    if (labelRecords.length > 0) {
-      await db.cardLabel.createMany({ data: labelRecords });
-    }
+      if (labelRecords.length > 0) {
+        await tx.cardLabel.createMany({ data: labelRecords });
+      }
+
+      return created;
+    });
+
+    if (!list) return { error: "List not found" };
 
     await createAuditLog({
       entityTitle: list.title,
