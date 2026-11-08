@@ -20,6 +20,12 @@ import {
 import { getChanges } from "@/lib/domain/changes";
 import { addComment, markDuplicate } from "@/lib/domain/comments";
 import { isDomainError } from "@/lib/domain/errors";
+import {
+  FRICTION_CATEGORIES,
+  FRICTION_COMPONENTS,
+  FRICTION_IMPACTS,
+  reportFriction,
+} from "@/lib/domain/friction";
 import { LIMITS } from "@/lib/domain/limits";
 
 const INSTRUCTIONS = `Cardigan task board. Start with describe_workspace: it returns your role, \
@@ -27,6 +33,22 @@ your capabilities, every board with its lists, and the labels. A denial names th
 may act, and what you can do instead. Poll get_changes with the last nextCursor instead of re-listing \
 boards. Creates and comments take an externalKey so retries are safe. Agents cannot delete \
 anything or change settings.`;
+
+/** Every tool the server registers; friction reports name one of them. */
+export const TOOL_NAMES = [
+  "describe_workspace",
+  "list_cards",
+  "search_cards",
+  "get_card",
+  "create_cards",
+  "update_card",
+  "move_card",
+  "add_comment",
+  "mark_duplicate",
+  "get_changes",
+  "report_friction",
+] as const;
+type ToolName = (typeof TOOL_NAMES)[number];
 
 // Text rules come from the server actions' schemas, so people and agents
 // follow the same ones.
@@ -51,7 +73,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
   );
 
   const run =
-    <A>(tool: string, fn: (args: A) => Promise<unknown>) =>
+    <A>(tool: ToolName, fn: (args: A) => Promise<unknown>) =>
     async (args: A): Promise<CallToolResult> => {
       try {
         const result = await fn(args);
@@ -244,6 +266,24 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
     },
     run("get_changes", (args: { cursor?: string; limit?: number }) =>
       getChanges(actor, args),
+    ),
+  );
+
+  server.registerTool(
+    "report_friction",
+    {
+      description: `File a friction report (a confusing or missing tool, an unexpected denial, anything the server cannot see) into Cardigan's suggestion box. Write-only: the receipt says only whether it was new or a repeat. Do not include secrets; token-shaped text is redacted. At most ${LIMITS.frictionPerHour} new reports per workspace per hour.`,
+      inputSchema: {
+        reportKey: externalKey,
+        component: z.enum(FRICTION_COMPONENTS),
+        category: z.enum(FRICTION_CATEGORIES),
+        tool: z.enum([...TOOL_NAMES, "none"]),
+        impact: z.enum(FRICTION_IMPACTS),
+        description: z.string().trim().min(1).max(LIMITS.frictionDescription),
+      },
+    },
+    run("report_friction", (args: Parameters<typeof reportFriction>[1]) =>
+      reportFriction(actor, args),
     ),
   );
 
