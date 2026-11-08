@@ -272,7 +272,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
   server.registerTool(
     "report_friction",
     {
-      description: `File a friction report (a confusing or missing tool, an unexpected denial, anything the server cannot see) into Cardigan's suggestion box. Write-only: the receipt says only whether it was new or a repeat. Do not include secrets; token-shaped text is redacted. At most ${LIMITS.frictionPerHour} new reports per hour.`,
+      description: `File a friction report (a confusing or missing tool, an unexpected denial, anything the server cannot see) into Cardigan's suggestion box. Write-only: the receipt says only whether it was new or a repeat. Do not include secrets; token-shaped text is redacted. At most ${LIMITS.frictionPerHour} new reports per workspace per hour.`,
       inputSchema: {
         reportKey: externalKey,
         component: z.enum(FRICTION_COMPONENTS),

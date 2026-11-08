@@ -82,10 +82,11 @@ const fingerprintCard = async (
     },
   });
   if (known) {
-    const card = await tx.card.findUniqueOrThrow({
+    const card = await tx.card.findUnique({
       where: { id: known.entityId },
     });
-    return { card, fingerprint, status: "repeat" as const };
+    if (card) return { card, fingerprint, status: "repeat" as const };
+    await tx.externalKey.deleteMany({ where: { id: known.id } });
   }
 
   const card = await tx.card.create({
@@ -158,11 +159,10 @@ export const reportFriction = async (
     keepResult: true,
     replay: async (_tx, _commentId, kept) => kept as FrictionReceipt,
     write: async (tx) => {
-      // Rate limit new reports per token per hour (ADR 0001).
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`friction:${actor.tokenId}`}))`;
+      // All tokens in a source workspace share the hourly report quota.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${scope}))`;
       const recent = await tx.externalKey.count({
         where: {
-          tokenId: actor.tokenId,
           scope,
           createdAt: { gt: new Date(Date.now() - 60 * 60 * 1000) },
         },
@@ -170,7 +170,7 @@ export const reportFriction = async (
       if (recent >= LIMITS.frictionPerHour) {
         throw new DomainError(
           "rate_limited",
-          `At most ${LIMITS.frictionPerHour} new friction reports per hour per token`,
+          `At most ${LIMITS.frictionPerHour} new friction reports per hour per workspace`,
         );
       }
 
