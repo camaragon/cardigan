@@ -18,6 +18,8 @@ export interface KeyedWrite<T> {
   key?: string;
   /** What the key promises: a replay must send the same payload. */
   payload: unknown;
+  /** Recognizes a prior payload format without rewriting its receipt. */
+  legacyPayload?: (tx: Tx, entityId: string) => Promise<unknown>;
   entityType: ENTITY_TYPE;
   tokenId?: string;
   /** Keeps the result with the key, for replays that must return it as it was. */
@@ -53,11 +55,15 @@ export const keyedWrite = async <T>(
         });
         if (existing) {
           if (existing.payloadHash !== payloadHash) {
-            throw new DomainError(
-              "conflict",
-              `External key "${input.key}" was already used with a different payload`,
-              { externalKey: input.key, existingId: existing.entityId },
-            );
+            const legacy = existing.entityType === input.entityType
+              ? await input.legacyPayload?.(tx, existing.entityId) : undefined;
+            if (legacy === undefined || existing.payloadHash !== hashPayload(legacy)) {
+              throw new DomainError(
+                "conflict",
+                `External key "${input.key}" was already used with a different payload`,
+                { externalKey: input.key, existingId: existing.entityId },
+              );
+            }
           }
           return {
             result: await input.replay(tx, existing.entityId, existing.result),

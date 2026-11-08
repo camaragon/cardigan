@@ -141,14 +141,15 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
     "get_card",
     {
       description:
-        "Everything about one card: description, labels, comments, provenance, version and a page of activity.",
+        "Everything about one card: description, labels, provenance, version, comments and activity. Comments default to the oldest 50; pass commentNextCursor as commentCursor while commentHasMore. Activity is newest event first; pass the last eventId as activityBefore for older events.",
       inputSchema: {
         cardId: id,
         activityLimit: z.number().int().min(1).max(LIMITS.page).optional(),
         activityBefore: z.number().int().min(1).optional(),
+        commentCursor: z.string().min(1).max(1024).optional(),
       },
     },
-    run("get_card", (args: { cardId: string; activityLimit?: number; activityBefore?: number }) =>
+    run("get_card", (args: { cardId: string; activityLimit?: number; activityBefore?: number; commentCursor?: string }) =>
       getCard(actor, args.cardId, args),
     ),
   );
