@@ -31,7 +31,7 @@ const AgentsPage = async () => {
       <Info isPro={isPro} />
       <Separator className="my-2" />
 
-      <section className="space-y-2">
+      <section className="space-y-4">
         <h2 className="text-lg font-semibold text-neutral-700">Agent tokens</h2>
         <p className="text-sm text-muted-foreground">
           Each token belongs to one agent with one role in this workspace. The
@@ -58,7 +58,7 @@ const AgentsPage = async () => {
         )}
       </section>
 
-      <section className="space-y-2">
+      <section className="space-y-4">
         <h2 className="text-lg font-semibold text-neutral-700">Agent roles</h2>
         <ul className="space-y-1 text-sm">
           {roleOptions.map((role) => (

@@ -74,23 +74,24 @@ export const TokenManager = ({ roles, tokens }: TokenManagerProps) => {
         </div>
       )}
 
-      <form action={onSubmit} className="flex flex-wrap items-end gap-2">
-        <div className="w-56">
+      <form action={onSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
           <FormInput
             id="agentName"
             label="Agent name"
             placeholder="PM agent"
+            className="h-8"
             errors={create.fieldErrors}
           />
         </div>
-        <div className="space-y-1">
-          <label htmlFor="roleKey" className="text-xs font-semibold text-neutral-700">
+        <div className="space-y-1 sm:w-40">
+          <label htmlFor="roleKey" className="block text-xs font-semibold text-neutral-700">
             Role
           </label>
           <select
             id="roleKey"
             name="roleKey"
-            className="block h-7 rounded-md border px-2 text-sm"
+            className="block h-8 w-full rounded-md border px-2 text-sm"
             defaultValue={roles[0]?.key}
           >
             {roles.map((role) => (
@@ -100,7 +101,7 @@ export const TokenManager = ({ roles, tokens }: TokenManagerProps) => {
             ))}
           </select>
         </div>
-        <FormSubmit>Create token</FormSubmit>
+        <FormSubmit className="w-full sm:w-auto">Create token</FormSubmit>
       </form>
 
       {tokens.length === 0 ? (
@@ -108,8 +109,8 @@ export const TokenManager = ({ roles, tokens }: TokenManagerProps) => {
       ) : (
         <ul className="divide-y rounded-md border text-sm">
           {tokens.map((token) => (
-            <li key={token.id} className="flex items-center justify-between gap-x-4 p-2">
-              <div>
+            <li key={token.id} className="flex items-center justify-between gap-4 p-3 sm:p-4">
+              <div className="min-w-0 break-words">
                 <p className="font-medium">
                   {token.agentName}{" "}
                   <span className="text-xs font-normal text-muted-foreground">
