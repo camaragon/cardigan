@@ -9,11 +9,9 @@ const svg = (content) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">${content}</svg>`;
 const smallMark = (size) =>
   paths
-    .replace('stroke-width="5.5"', `stroke-width="${size === 16 ? 7.5 : size === 32 ? 7 : 5.5}"`)
-    .replace("#3AA0DE", "#A8DBF8")
-    .replace("#0A5C94", "#FFFFFF");
+    .replace('stroke-width="5.5"', `stroke-width="${size === 16 ? 7.5 : size === 32 ? 7 : 5.5}"`);
 const faviconTile = (content) =>
-  `<rect width="48" height="48" rx="10.5" fill="#0A5C94"/><g transform="translate(6.75 6.75) scale(0.71875)">${content}</g>`;
+  `<rect width="48" height="48" rx="10.5" fill="#FFFFFF"/><g transform="translate(6.75 6.75) scale(0.71875)">${content}</g>`;
 
 // SVG image media queries use the rendered viewport, including favicon size.
 await writeFile(
@@ -31,7 +29,7 @@ await writeFile(
 await writeFile(
   new URL("apple-touch-icon.png", output),
   await sharp(Buffer.from(svg(
-    `<path fill="#0A5C94" d="M0 0H48V48H0Z"/><g transform="translate(6.75 6.75) scale(0.71875)">${paths.replace("#3AA0DE", "#A8DBF8").replace("#0A5C94", "#FFFFFF")}</g>`,
+    `<path fill="#FFFFFF" d="M0 0H48V48H0Z"/><g transform="translate(6.75 6.75) scale(0.71875)">${paths}</g>`,
   )))
     .resize(180, 180)
     .png()
