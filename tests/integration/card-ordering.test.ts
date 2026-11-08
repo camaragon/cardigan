@@ -118,12 +118,14 @@ describe.skipIf(!hasTestDatabase)("serialized card ordering", async () => {
     const label = await db.label.create({ data: { orgId: actor.orgId, name: "Urgent", color: "red" } });
     await db.cardLabel.create({ data: { cardId: "b", labelId: label.id } });
     const results = await queued(board.id, [
-      () => createList({ boardId: board.id, title: "Extra" }),
-      () => cloneList({ boardId: board.id, id: lists.todo.id }),
+      // Reorder the complete snapshot before the queued appends add new lists.
       () => updateListOrder({ boardId: board.id, lists: [
         { ...lists.todo, order: 2 },
         { ...lists.doing, order: 1 },
+        { ...lists.done, order: 3 },
       ] }),
+      () => createList({ boardId: board.id, title: "Extra" }),
+      () => cloneList({ boardId: board.id, id: lists.todo.id }),
     ]);
     for (const result of results) expect(result).toHaveProperty("data");
     const orderedLists = await db.list.findMany({ where: { boardId: board.id }, orderBy: { order: "asc" } });

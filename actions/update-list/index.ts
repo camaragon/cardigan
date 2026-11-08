@@ -1,18 +1,16 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
+import { getPersonActor } from "@/lib/domain/person";
 import { InputType, ReturnType } from "./types";
-import { db } from "@/lib/db";
+import { updateList as mutate } from "@/lib/domain/lists";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { UpdateList } from "./schema";
-import { createAuditLog } from "@/lib/create-audit-log";
-import { ACTION, ENTITY_TYPE } from "@prisma/client";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  const { userId, orgId } = await auth();
+  const actor = await getPersonActor();
 
-  if (!userId || !orgId) {
+  if (!actor) {
     return {
       error: "Unauthorized",
     };
@@ -22,25 +20,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   let list;
 
   try {
-    list = await db.list.update({
-      where: {
-        id,
-        boardId,
-        board: {
-          orgId,
-        },
-      },
-      data: {
-        title,
-      },
-    });
-
-    await createAuditLog({
-      entityTitle: list.title,
-      entityId: list.id,
-      entityType: ENTITY_TYPE.LIST,
-      action: ACTION.UPDATE,
-    });
+    list = await mutate(actor, { id, boardId, title });
   } catch {
     return {
       error: "Failed to update list",
