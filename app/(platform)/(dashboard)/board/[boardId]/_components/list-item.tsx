@@ -61,7 +61,6 @@ export const ListItem = ({ data, index, filtering = false }: ListItemProps) => {
                       index={index}
                       key={card.id}
                       data={card}
-                      isDragDisabled={filtering}
                     />
                   ))}
                   {provided.placeholder}
