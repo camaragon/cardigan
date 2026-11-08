@@ -42,7 +42,7 @@ vi.mock("@/app/(platform)/(dashboard)/board/[boardId]/_components/board-toolbar"
 import { ListContainer } from "@/app/(platform)/(dashboard)/board/[boardId]/_components/list-container";
 
 const board = () => [
-  { id: "a", title: "Plan", order: 0, cards: [{ id: "card", title: "Demo task", listId: "a", labels: [] }] },
+  { id: "a", title: "Plan", order: 0, cards: [{ id: "card", title: "Demo task", listId: "a", labels: [], version: 1 }] },
   { id: "b", title: "Done", order: 1, cards: [] },
 ] as unknown as ListWithCards[];
 const drop = (type: string) => ({
@@ -55,9 +55,19 @@ const renderBoard = (data: ListWithCards[]) => {
   const view = ListContainer({ boardId: "board", data });
   const children = view.props.children as ReactElement[];
   for (const effect of state.effects.splice(0)) effect();
+  const context = children.find((child) => child?.type === "context") as ReactElement<{
+    onBeforeCapture: (start: { draggableId: string }) => void;
+    onDragEnd: (drop: DropResult) => void;
+  }>;
   return {
+    start: context.props.onBeforeCapture,
+    end: context.props.onDragEnd,
+    alert: children.find((child) => (child?.props as { role?: string })?.role === "alert"),
     lists: (children[0] as ReactElement<{ lists: ListWithCards[] }>).props.lists,
-    drag: (children[2] as ReactElement<{ onDragEnd: (drop: DropResult) => void }>).props.onDragEnd,
+    drag: (drop: DropResult) => {
+      context.props.onBeforeCapture({ draggableId: drop.draggableId });
+      context.props.onDragEnd(drop);
+    },
   };
 };
 beforeEach(() => {
@@ -105,4 +115,22 @@ it("reconciles success before accepting another drag and preserves that success 
   renderBoard(committed);
   await state.submitted;
   expect(renderBoard(committed).lists).toEqual(committed);
+});
+
+it("keeps the drag-start version across refreshed props and reconciles a stale conflict with a reload path", async () => {
+  state.move.mockResolvedValue({ error: "Card changed", domainError: { type: "stale_version", message: "Card changed" } });
+  const initial = renderBoard(board());
+  initial.start({ draggableId: "card" });
+  const newer = board();
+  newer[0].cards[0].version = 2;
+  renderBoard(newer).end(drop("card"));
+  await state.submitted;
+
+  expect(state.move).toHaveBeenCalledWith(expect.objectContaining({ id: "card", version: 1 }));
+  const view = renderBoard(newer);
+  expect(view.lists).toEqual(newer);
+  const { children } = view.alert!.props as { children: ReactElement<{ children: string; onClick: () => void }>[] };
+  expect(children[0].props.children).toContain("was not applied");
+  children[1].props.onClick();
+  expect(state.refresh).toHaveBeenCalledTimes(2);
 });
