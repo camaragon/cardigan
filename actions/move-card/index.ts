@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { MoveCard } from "./schema";
 import { moveCard as moveCardInDomain } from "@/lib/domain/cards";
-import { errorMessage } from "@/lib/domain/errors";
+import { errorMessage, isDomainError } from "@/lib/domain/errors";
 import { getPersonActor } from "@/lib/domain/person";
 
 /** One drag is one audited single-card move (PRD C-6). */
@@ -18,13 +18,14 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     };
   }
 
-  const { id, boardId, toListId, position } = data;
+  const { id, boardId, toListId, position, version } = data;
   let card;
 
   try {
-    card = await moveCardInDomain(actor, { cardId: id, toListId, position });
+    card = await moveCardInDomain(actor, { cardId: id, toListId, position, expectedVersion: version });
   } catch (error) {
     return {
+      domainError: isDomainError(error) ? error.toJSON() : undefined,
       error: errorMessage(error, "Failed to move card"),
     };
   }

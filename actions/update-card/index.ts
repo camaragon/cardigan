@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { UpdateCard } from "./schema";
 import { updateCard as updateCardInDomain } from "@/lib/domain/cards";
-import { errorMessage } from "@/lib/domain/errors";
+import { errorMessage, isDomainError } from "@/lib/domain/errors";
 import { getPersonActor } from "@/lib/domain/person";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
@@ -17,13 +17,14 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     };
   }
 
-  const { id, boardId, title, description } = data;
+  const { id, boardId, title, description, version } = data;
   let card;
 
   try {
-    card = await updateCardInDomain(actor, { cardId: id, title, description });
+    card = await updateCardInDomain(actor, { cardId: id, title, description, expectedVersion: version });
   } catch (error) {
     return {
+      domainError: isDomainError(error) ? error.toJSON() : undefined,
       error: errorMessage(error, "Failed to update card"),
     };
   }

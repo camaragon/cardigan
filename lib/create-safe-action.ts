@@ -1,3 +1,4 @@
+import type { DomainError } from "@/lib/domain/errors";
 import { z } from "zod";
 
 export type FieldErrors<T> = {
@@ -7,6 +8,7 @@ export type FieldErrors<T> = {
 export type ActionState<TInput, TOutput> = {
   fieldErrors?: FieldErrors<TInput>;
   error?: string | null;
+  domainError?: ReturnType<DomainError["toJSON"]>;
   data?: TOutput;
 };
 

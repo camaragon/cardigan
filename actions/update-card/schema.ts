@@ -2,6 +2,7 @@ import { z } from "zod";
 import { LIMITS } from "@/lib/domain/limits";
 
 export const UpdateCard = z.object({
+  version: z.number().int().min(1).optional(),
   boardId: z.string(),
   description: z.optional(
     z
