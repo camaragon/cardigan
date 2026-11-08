@@ -127,31 +127,36 @@ body {
 }
 
 /* Window horizontal scrolling avoids unsupported nested drag scroll containers.
-   Slim, rounded scrollbars for the board and its lists: a mid-gray thumb on a faint
-   dark track stays legible over light photos, dark photos and the black columns. */
-:is(html:has(.board-canvas), .board-scrollbar) {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(150 150 150 / 65%) rgb(0 0 0 / 25%);
+   Slim, rounded scrollbars for the board and its lists, legible over light photos,
+   dark photos and the black columns. Chromium ignores ::-webkit-scrollbar once
+   scrollbar-color/width is set, so the standard properties are for Firefox only. */
+html:has(.board-canvas) {
+  background: oklch(0.145 0 0);
 }
-:is(html:has(.board-canvas), .board-scrollbar):is(:hover, :focus-within) {
-  scrollbar-color: rgb(190 190 190 / 90%) rgb(0 0 0 / 30%);
+@supports not selector(::-webkit-scrollbar) {
+  :is(html:has(.board-canvas), .board-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(150 150 150 / 65%) transparent;
+  }
 }
 :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-button {
   display: none;
 }
 :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-track,
 :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-corner {
-  background: rgb(0 0 0 / 25%);
-  border-radius: 999px;
+  background: transparent;
 }
 :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-thumb {
   background: rgb(150 150 150 / 65%);
+  border: 2px solid transparent;
+  background-clip: padding-box;
   border-radius: 999px;
 }
-:is(html:has(.board-canvas), .board-scrollbar):is(:hover, :focus-within)::-webkit-scrollbar-thumb {
+:is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-thumb:hover {
   background: rgb(190 190 190 / 90%);
+  background-clip: padding-box;
 }
