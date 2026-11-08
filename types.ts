@@ -1,7 +1,7 @@
 import { Card, CardLabel, Label, List } from "@prisma/client";
 
 export type ListWithCards = List & {
-  cards: (Card & { labels: (CardLabel & { label: Label })[] })[];
+  cards: (CardWithLabels & { _count: { comments: number } })[];
 };
 
 export type CardWithList = Card & { list: List };
