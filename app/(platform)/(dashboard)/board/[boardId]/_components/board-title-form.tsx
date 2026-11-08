@@ -60,7 +60,7 @@ export const BoardTitleForm = ({ data }: BoardTitleFormProps) => {
       <form
         action={onSubmit}
         ref={formRef}
-        className="flex items-center gap-x-2"
+        className="flex min-w-0 items-center gap-x-2"
       >
         <FormInput
           ref={inputRef}
@@ -77,9 +77,9 @@ export const BoardTitleForm = ({ data }: BoardTitleFormProps) => {
     <Button
       onClick={enableEditing}
       variant="transparent"
-      className="font-bold text-lg h-auto w-auto p-1 px-2"
+      className="font-bold text-lg h-auto max-w-full min-w-0 p-1 px-2"
     >
-      {title}
+      <span className="truncate">{title}</span>
     </Button>
   );
 };
