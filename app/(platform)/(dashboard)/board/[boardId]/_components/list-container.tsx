@@ -20,6 +20,7 @@ import {
   matchesBoardFilters,
 } from "@/lib/board-filters";
 import { moveCard } from "@/actions/move-card";
+import { getCardDropPosition } from "@/lib/board-card-order";
 
 interface ListContainerProps {
   boardId: string;
@@ -68,6 +69,7 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
   });
 
   const handleCardMove = (
+    cardId: string,
     source: DraggableLocation,
     destination: DraggableLocation,
   ) => {
@@ -86,8 +88,16 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
 
     if (!sourceList || !destinationList) return;
 
-    const [movedCard] = sourceList.cards.splice(source.index, 1);
-    destinationList.cards.splice(destination.index, 0, {
+    const sourceIndex = sourceList.cards.findIndex((card) => card.id === cardId);
+    if (sourceIndex === -1) return;
+
+    const [movedCard] = sourceList.cards.splice(sourceIndex, 1);
+    const position = getCardDropPosition(
+      destinationList.cards,
+      destinationList.cards.filter((card) => matchesBoardFilters(card, filters)),
+      destination.index,
+    );
+    destinationList.cards.splice(position, 0, {
       ...movedCard,
       listId: destinationList.id,
     });
@@ -98,7 +108,7 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
       id: movedCard.id,
       boardId,
       toListId: destinationList.id,
-      position: destination.index,
+      position,
     });
   };
 
@@ -114,8 +124,8 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
     executeUpdateListOrder({ boardId, lists });
   };
 
-  const onDragEnd = ({ destination, source, type }: DropResult) => {
-    if (!destination || filtering) return;
+  const onDragEnd = ({ draggableId, destination, source, type }: DropResult) => {
+    if (!destination) return;
 
     const isSamePosition =
       destination.droppableId === source.droppableId &&
@@ -123,12 +133,12 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
 
     if (isSamePosition) return;
 
-    if (type === "list") {
+    if (type === "list" && !filtering) {
       handleListReorder(source, destination);
     }
 
     if (type === "card") {
-      handleCardMove(source, destination);
+      handleCardMove(draggableId, source, destination);
     }
   };
 
@@ -145,7 +155,7 @@ export const ListContainer = ({ boardId, data }: ListContainerProps) => {
           className="mb-2 w-fit max-w-[calc(100vw-2rem)] rounded bg-black/60 px-2 py-1 text-xs text-white"
         >
           {visibleData.reduce((total, list) => total + list.cards.length, 0)}{" "}
-          matching cards. Dragging is paused while filters are active.
+          matching cards.
         </p>
       )}
       <DragDropContext onDragEnd={onDragEnd}>
