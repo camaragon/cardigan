@@ -1,17 +1,16 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
+import { getPersonActor } from "@/lib/domain/person";
 import { InputType, ReturnType } from "./types";
-import { transaction } from "@/lib/domain/audit";
-import { lockBoardOrder } from "@/lib/domain/ordering";
+import { reorderLists as mutate } from "@/lib/domain/lists";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "@/lib/create-safe-action";
 import { UpdateListOrder } from "./schema";
 
 const handler = async (data: InputType): Promise<ReturnType> => {
-  const { userId, orgId } = await auth();
+  const actor = await getPersonActor();
 
-  if (!userId || !orgId) {
+  if (!actor) {
     return {
       error: "Unauthorized",
     };
@@ -21,17 +20,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
   let updatedLists;
 
   try {
-    updatedLists = await transaction(async (tx) => {
-      await lockBoardOrder(tx, boardId);
-      const updated = [];
-      for (const list of lists) {
-        updated.push(await tx.list.update({
-          where: { id: list.id, boardId, board: { orgId } },
-          data: { order: list.order },
-        }));
-      }
-      return updated;
-    });
+    updatedLists = await mutate(actor, { boardId, lists });
   } catch {
     return {
       error: "Failed to reorder",

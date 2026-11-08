@@ -1,4 +1,5 @@
 import { ACTOR_KIND, SURFACE } from "@prisma/client";
+import { DomainError } from "./errors";
 
 /** Core capabilities an agent role may hold (ADR 0004). */
 export const CAPABILITIES = [
@@ -47,3 +48,8 @@ export const keyScope = (actor: Actor) =>
 
 /** Clerk organization role that makes a person the workspace owner. */
 export const OWNER_ORG_ROLE = "org:admin";
+
+/** Catalog mutations retain their existing people-only authority. */
+export const requirePerson = (actor: Actor) => {
+  if (isAgent(actor)) throw new DomainError("denied", "Only people can change workspace structure");
+};
