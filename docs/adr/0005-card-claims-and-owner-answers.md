@@ -2,6 +2,9 @@
 
 Status: accepted. The owner approved PRD amendments A-1 and A-2 on 2026-11-04;
 this ADR records the authority rules they need.
+Amended by [ADR 0006](0006-templates-are-starting-points.md): there is no
+product template, so the claim capability belongs to the workspace's agent role
+and the Waiting on owner list and its notice are gone.
 
 ## Context
 
