@@ -152,6 +152,30 @@ Postgres service on every pull request.
 
 ## Architecture
 
+### Agent card fields (MCP)
+
+`get_card`, `list_cards` and `search_cards` include `priority`, `assignee`,
+`blockedByIds` and `blockedBy` (`{ id, title }` entries). Existing calls remain
+compatible. `update_card` accepts any of these optional edits along with
+`cardId` and the `version` returned by the last read:
+
+```json
+{ "cardId": "card-id", "version": 1, "priority": "high", "assignee": "Review agent", "blockedByIds": ["blocking-card-id"] }
+```
+
+Priority is ordered `none < low < medium < high` and defaults to `none`; it does
+not reorder the board. Assignee is trimmed free text, at most 80 characters;
+`""` clears it. It grants no permissions and is separate from future claims
+([ADR 0008](docs/adr/0008-free-text-card-assignees.md)). Omitted fields stay as
+they are. `blockedByIds` replaces all blockers (at most 50 per update); `[]` clears them. Blockers may
+belong to another board in the same workspace. Missing/foreign ids return
+`not_found`; self-links and cycles return `invalid`. Deleting a card removes
+its incoming and outgoing dependency links. All edits bump the card version
+and write an attributed activity/changes event in the same transaction; stale
+versions return `stale_version` with the current card and last actor. Re-read
+and compare intent before resubmitting. Agents need the `update` capability;
+boards have no list workflow rules (ADR 0006).
+
 ### Server Actions
 
 All mutations follow a consistent pattern in `/actions/[entity]/`:

@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { LIMITS } from "@/lib/domain/limits";
+import { CardFields } from "@/lib/domain/card-fields";
 
 export const UpdateCard = z.object({
+  ...CardFields.shape,
   version: z.number().int().min(1).optional(),
   boardId: z.string(),
   description: z.optional(

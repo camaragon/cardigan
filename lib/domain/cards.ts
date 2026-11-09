@@ -59,6 +59,10 @@ export const compactCard = (card: CardWithContext) => ({
   list: card.list.title,
   boardId: card.list.boardId,
   labels: card.labels.map((l) => l.label.name),
+  priority: card.priority,
+  assignee: card.assignee,
+  blockedByIds: card.blockedBy.map((d) => d.blockerId),
+  blockedBy: card.blockedBy.map((d) => d.blocker),
   version: card.version,
   updatedAt: card.updatedAt.toISOString(),
 });
