@@ -36,6 +36,18 @@ describe.skipIf(!hasTestDatabase)("card fields (A-2 subset)", async () => {
     await expect(updateCard(owner(), { cardId: a.id, assignee: "a".repeat(81) })).rejects.toMatchObject({ type: "invalid" });
   });
 
+  it("accepts 50 blockers and rejects oversized edits before changing the card or audit", async () => {
+    const [a] = await makeCards();
+    const ids = Array.from({ length: 51 }, (_, i) => `blocker-${i}`);
+    await db.card.createMany({ data: ids.map((id, order) => ({ id, title: id, order, listId: a.listId })) });
+    const updated = await updateCard(agent(), { cardId: a.id, blockedByIds: ids.slice(0, 50) });
+    expect(updated.blockedBy).toHaveLength(50);
+    await expect(updateCard(agent(), { cardId: a.id, expectedVersion: 2, blockedByIds: ids }))
+      .rejects.toMatchObject({ type: "invalid", message: "A card can have at most 50 blocked-by cards" });
+    expect(await loadCard(db, owner(), a.id)).toMatchObject({ version: 2, blockedBy: updated.blockedBy });
+    expect(await db.auditLog.count({ where: { entityId: a.id, action: "UPDATE" } })).toBe(1);
+  });
+
   it("rejects self-links, indirect cycles and concurrent opposite links", async () => {
     const [a, b, c] = await makeCards();
     await expect(updateCard(agent(), { cardId: a.id, blockedByIds: [a.id] }))

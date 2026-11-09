@@ -6,5 +6,6 @@ export const ASSIGNEE_MAX = 80;
 export const CardFields = z.object({
   priority: z.enum(CARD_PRIORITIES).optional(),
   assignee: z.string().trim().max(ASSIGNEE_MAX).optional(),
-  blockedByIds: z.array(z.string().min(1).max(100)).optional(),
+  blockedByIds: z.array(z.string().min(1).max(100))
+    .max(50, "A card can have at most 50 blocked-by cards").optional(),
 });

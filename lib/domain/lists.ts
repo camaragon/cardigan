@@ -79,6 +79,7 @@ export const cloneList = async (actor: Actor, input: { id: string; boardId: stri
           createMany: {
             data: copies.map(({ source: card, id, order }) => ({
               id, order, title: card.title, description: card.description,
+              priority: card.priority, assignee: card.assignee,
               creatorKind: actor.kind, creatorId: actor.id,
               creatorName: actor.name, creatorSurface: actor.surface,
             })),

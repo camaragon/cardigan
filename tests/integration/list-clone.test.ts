@@ -14,10 +14,12 @@ describe.skipIf(!hasTestDatabase)("transactional list clone", () => {
     const { board, lists } = await seedBoard(owner());
     await db.card.createMany({ data: ["b", "a"].map((id) => ({
       id, title: id, description: `Description ${id}`, order: 1, listId: lists.todo.id,
+      priority: "high" as const, assignee: "Demo agent",
       creatorKind: "AGENT", creatorId: "source-agent", creatorName: "Demo agent", creatorSurface: "MCP",
     })) });
     const label = await db.label.create({ data: { orgId: board.orgId, name: "Review", color: "red" } });
     await db.cardLabel.create({ data: { cardId: "b", labelId: label.id } });
+    await db.cardDependency.create({ data: { cardId: "b", blockerId: "a" } });
     await addComment(owner(), { cardId: "b", body: "Keep on source" });
     return { board, lists, label };
   }
@@ -36,7 +38,7 @@ describe.skipIf(!hasTestDatabase)("transactional list clone", () => {
     const clone = await cloneList(actor, { id: lists.todo.id, boardId: board.id });
     expect(clone).toMatchObject({ title: "To do - Clone", order: 4 });
     const cards = await db.card.findMany({
-      where: { listId: clone.id }, orderBy: { order: "asc" }, include: { labels: true, comments: true },
+      where: { listId: clone.id }, orderBy: { order: "asc" }, include: { labels: true, comments: true, blockedBy: true },
     });
     expect(cards.map((c) => [c.title, c.description, c.order, c.labels.map((l) => l.labelId)])).toEqual([
       ["a", "Description a", 0, []], ["b", "Description b", 1, [label.id]],
@@ -44,8 +46,10 @@ describe.skipIf(!hasTestDatabase)("transactional list clone", () => {
     for (const card of cards) {
       expect(card.id).not.toBe(card.title);
       expect(card).toMatchObject({ creatorKind: actor.kind, creatorId: actor.id, creatorName: actor.name, creatorSurface: actor.surface, version: 1, comments: [] });
+      expect(card).toMatchObject({ priority: "high", assignee: "Demo agent", blockedBy: [] });
     }
     expect(await db.comment.count()).toBe(1);
+    expect(await db.cardDependency.count()).toBe(1);
     expect((await getChanges(actor, { cursor })).events).toMatchObject([
       { action: "CREATE", entityType: "LIST", entityId: clone.id, actor: { kind: actor.kind } },
     ]);
