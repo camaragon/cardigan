@@ -16,6 +16,7 @@ import {
   moveCard,
   searchCards,
   updateCard,
+  UpdateCardInput,
 } from "@/lib/domain/cards";
 import { getChanges } from "@/lib/domain/changes";
 import { addComment, markDuplicate } from "@/lib/domain/comments";
@@ -54,7 +55,7 @@ type ToolName = (typeof TOOL_NAMES)[number];
 // follow the same ones.
 const id = z.string().min(1).max(100);
 const externalKey = z.string().min(1).max(LIMITS.externalKey);
-const { title, description } = UpdateCard.shape;
+const { title, description, priority, assignee, blockedByIds } = UpdateCard.shape;
 const { body } = AddComment.shape;
 
 /** Tracks whether a tool handler already recorded its own failure. */
@@ -176,21 +177,27 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
     "update_card",
     {
       description:
-        "Update a card's title or description. Pass the version you read; a stale version is refused with the current card and its last actor.",
+        "Update title, description, priority, assignee or blockedByIds (replacement set in this workspace, no cycles). Empty assignee clears it. Pass the version you read; stale versions are refused.",
       inputSchema: {
         cardId: id,
         version: z.number().int().min(1),
         title,
         description,
+        priority,
+        assignee,
+        blockedByIds,
       },
     },
-    run("update_card", async (args: { cardId: string; version: number; title?: string; description?: string }) =>
+    run("update_card", async (args: UpdateCardInput & { version: number }) =>
       compactCard(
         await updateCard(actor, {
           cardId: args.cardId,
           expectedVersion: args.version,
           title: args.title,
           description: args.description,
+          priority: args.priority,
+          assignee: args.assignee,
+          blockedByIds: args.blockedByIds,
         }),
       ),
     ),

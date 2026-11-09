@@ -17,11 +17,11 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     };
   }
 
-  const { id, boardId, title, description, version } = data;
+  const { id, boardId, title, description, version, priority, assignee, blockedByIds } = data;
   let card;
 
   try {
-    card = await updateCardInDomain(actor, { cardId: id, title, description, expectedVersion: version });
+    card = await updateCardInDomain(actor, { cardId: id, title, description, priority, assignee, blockedByIds, expectedVersion: version });
   } catch (error) {
     return {
       domainError: isDomainError(error) ? error.toJSON() : undefined,
