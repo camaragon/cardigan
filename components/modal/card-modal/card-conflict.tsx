@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { CardWithList } from "@/types";
+import { CardWithListAndLabels } from "@/types";
 import { Button } from "@/components/ui/button";
 
 export const CardConflict = ({ cardId, onReload }: {
   cardId: string;
-  onReload: (latest: CardWithList) => void;
+  onReload: (latest: CardWithListAndLabels) => void;
 }) => {
-  const [latest, setLatest] = useState<CardWithList | null>(null);
+  const [latest, setLatest] = useState<CardWithListAndLabels | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -18,7 +18,7 @@ export const CardConflict = ({ cardId, onReload }: {
     try {
       const response = await fetch(`/api/cards/${cardId}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Reload failed");
-      const card: CardWithList | null = await response.json();
+      const card: CardWithListAndLabels | null = await response.json();
       if (!card) throw new Error("Card unavailable");
       setLatest(card);
       onReload(card);
@@ -41,6 +41,8 @@ export const CardConflict = ({ cardId, onReload }: {
           <p className="font-semibold">Latest saved card (version {latest.version})</p>
           <p>{latest.title} · {latest.list.title}</p>
           <p>{latest.description || "No description"}</p>
+          <p>Priority: {latest.priority} · Assignee: {latest.assignee || "Unassigned"}</p>
+          <p>Blocked by: {latest.blockedBy?.map((d) => d.blocker.title).join(", ") || "None"}</p>
           <p className="mt-2">Compare with your draft above, then save when ready.</p>
         </div>
       )}

@@ -29,7 +29,7 @@ const BoardIdPage = async ({ params }: BoardIdPageProps) => {
           order: "asc",
         },
         include: {
-          _count: { select: { comments: true } },
+          _count: { select: { comments: true, blockedBy: true } },
           labels: {
             include: {
               label: true,

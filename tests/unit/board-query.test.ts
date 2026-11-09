@@ -21,7 +21,7 @@ it("loads comment counts with cards within the active workspace", async () => {
       include: {
         cards: expect.objectContaining({
           include: expect.objectContaining({
-            _count: { select: { comments: true } },
+            _count: { select: { comments: true, blockedBy: true } },
           }),
         }),
       },
