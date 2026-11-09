@@ -6,10 +6,13 @@ import { denied, DomainError, notFound } from "./errors";
 import { keyedWrite } from "./keys";
 import { LIMITS } from "./limits";
 import { lockBoardOrder } from "./ordering";
+import { CardFields, CARD_PRIORITIES } from "./card-fields";
+import { validateBlockers } from "./dependencies";
 
 const cardWithContext = {
   list: true,
   labels: { include: { label: true } },
+  blockedBy: { include: { blocker: { select: { id: true, title: true } } } },
 } satisfies Prisma.CardInclude;
 
 export type CardWithContext = Prisma.CardGetPayload<{
@@ -177,20 +180,36 @@ export interface UpdateCardInput {
   cardId: string;
   title?: string;
   description?: string;
+  priority?: (typeof CARD_PRIORITIES)[number];
+  assignee?: string;
+  blockedByIds?: string[];
   /** When given, the update is refused unless the card is at this version. */
   expectedVersion?: number;
 }
 
 export const updateCard = async (actor: Actor, input: UpdateCardInput) => {
+  const parsed = CardFields.safeParse(input);
+  if (!parsed.success) throw new DomainError("invalid", parsed.error.issues[0].message);
+  const fields = parsed.data;
   const result = await transaction(async (tx) => {
+    if (fields.blockedByIds !== undefined) {
+      // Serialize graph reads and writes so concurrent edits cannot introduce a cycle.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`dependencies:${actor.orgId}`}))`;
+    }
     const card = await loadCard(tx, actor, input.cardId);
     requireCapability(actor, "update");
 
     const version = input.expectedVersion ?? card.version;
+    if (version !== card.version) return null;
+    const blockerIds = fields.blockedByIds === undefined
+      ? undefined : [...new Set(fields.blockedByIds)];
+    if (blockerIds !== undefined) await validateBlockers(tx, actor, card.id, blockerIds);
     const data: Prisma.CardUpdateManyMutationInput = {
       version: { increment: 1 },
     };
     if (input.title !== undefined) data.title = input.title;
+    if (fields.priority !== undefined) data.priority = fields.priority;
+    if (fields.assignee !== undefined) data.assignee = fields.assignee || null;
     if (input.description !== undefined) {
       data.description = input.description || null;
     }
@@ -199,6 +218,13 @@ export const updateCard = async (actor: Actor, input: UpdateCardInput) => {
       data,
     });
     if (count === 0) return null;
+
+    if (blockerIds !== undefined) {
+      await tx.cardDependency.deleteMany({ where: { cardId: card.id } });
+      await tx.cardDependency.createMany({
+        data: blockerIds.map((blockerId) => ({ cardId: card.id, blockerId })),
+      });
+    }
 
     const updated = await loadCard(tx, actor, card.id);
     await writeAudit(tx, actor, {

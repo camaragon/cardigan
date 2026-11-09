@@ -55,6 +55,10 @@ model Card {
 	title		String
 	order		Int
 	description	String? @db.Text
+	priority	CARD_PRIORITY @default(none)
+	assignee	String? @db.VarChar(80)
+	blockedBy	CardDependency[] @relation("BlockedCard")
+	blocking	CardDependency[] @relation("BlockerCard")
 
 	listId		String
 	list		List @relation(fields: [listId], references: [id], onDelete: Cascade)
@@ -74,6 +78,23 @@ model Card {
 	updatedAt	DateTime @updatedAt
 
 	@@index([listId])
+}
+
+enum CARD_PRIORITY {
+	none
+	low
+	medium
+	high
+}
+
+model CardDependency {
+	cardId		String
+	blockerId	String
+	card		Card @relation("BlockedCard", fields: [cardId], references: [id], onDelete: Cascade)
+	blocker		Card @relation("BlockerCard", fields: [blockerId], references: [id], onDelete: Cascade)
+
+	@@id([cardId, blockerId])
+	@@index([blockerId])
 }
 
 enum COMMENT_KIND {
