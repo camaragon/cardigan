@@ -167,7 +167,7 @@ Priority is ordered `none < low < medium < high` and defaults to `none`; it does
 not reorder the board. Assignee is trimmed free text, at most 80 characters;
 `""` clears it. It grants no permissions and is separate from future claims
 ([ADR 0008](docs/adr/0008-free-text-card-assignees.md)). Omitted fields stay as
-they are. `blockedByIds` replaces all blockers; `[]` clears them. Blockers may
+they are. `blockedByIds` replaces all blockers (at most 50 per update); `[]` clears them. Blockers may
 belong to another board in the same workspace. Missing/foreign ids return
 `not_found`; self-links and cycles return `invalid`. Deleting a card removes
 its incoming and outgoing dependency links. All edits bump the card version
