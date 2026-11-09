@@ -64,7 +64,7 @@ it.each(["closed", "no id"])("disables queries when %s, with no undefined-id que
 });
 
 it("renders related read failures with retry once the card is ready", () => {
-  state.card = { data: { title: "Demo card" }, isSuccess: true };
+  state.card = { data: { title: "Demo card", priority: "none", assignee: null, blockedBy: [] }, isSuccess: true };
   state.relatedError = true;
   const html = render();
   expect(state.queries.every((query) => query.enabled === true)).toBe(true);
