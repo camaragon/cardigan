@@ -25,6 +25,7 @@ export async function GET(
         },
       },
       include: {
+        blockedBy: { include: { blocker: { select: { id: true, title: true } } } },
         list: {
           select: {
             title: true,

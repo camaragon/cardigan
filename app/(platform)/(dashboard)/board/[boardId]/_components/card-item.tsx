@@ -68,6 +68,17 @@ export const CardItem = ({ data, index, isDragDisabled = false }: CardItemProps)
             </div>
           )}
           <p className="line-clamp-2 break-words">{data.title}</p>
+          {(data.priority !== "none" || data.assignee || data._count.blockedBy > 0) && (
+            <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-600">
+              {data.priority !== "none" && (
+                <span aria-label={`Priority: ${data.priority}`} className={`shrink-0 font-medium capitalize ${data.priority === "high" ? "text-amber-800" : ""}`}>
+                  {data.priority}
+                </span>
+              )}
+              {data.assignee && <span className="min-w-0 truncate" title={`Assignee: ${data.assignee}`} aria-label={`Assignee: ${data.assignee}`}>{data.assignee}</span>}
+              {data._count.blockedBy > 0 && <span className="shrink-0" aria-label={`Blocked by ${data._count.blockedBy} cards`}>Blocked · {data._count.blockedBy}</span>}
+            </div>
+          )}
           <div className="mt-2 flex items-center gap-2.5 text-xs text-neutral-500">
             {data.description && (
               <span title="Has description" aria-label="Has description">

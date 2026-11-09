@@ -13,6 +13,7 @@ import { AuditLog, Comment } from "@prisma/client";
 import { Activity } from "./activity";
 import { Labels } from "./labels";
 import { Comments, CommentForm } from "./comments";
+import { Planning } from "./planning";
 
 import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
@@ -105,6 +106,7 @@ export const CardModal = () => {
               )}
             </header>
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-4 [overflow-wrap:anywhere]">
+              {cardData && <Planning key={cardData.id} data={cardData} />}
               {!cardData ? <Description.Skeleton /> : <Description data={cardData} />}
               {comments.isError ? (
                 <ReadError message="Unable to load comments." retry={() => { void comments.refetch(); }} />
