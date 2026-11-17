@@ -5,6 +5,7 @@ import { transaction, Tx, writeAudit } from "./audit";
 import { denied, DomainError, notFound } from "./errors";
 import { keyedWrite } from "./keys";
 import { LIMITS } from "./limits";
+import { allocateCardNumbers } from "./card-keys";
 import { lockBoardOrder } from "./ordering";
 import { CardFields, CARD_PRIORITIES } from "./card-fields";
 import { validateBlockers } from "./dependencies";
@@ -153,6 +154,7 @@ export const createCard = async (actor: Actor, input: CreateCardInput) => {
           description: input.description || null,
           listId: list.id,
           order: await nextOrder(tx, list.id),
+          number: await allocateCardNumbers(tx, list.boardId),
           creatorKind: actor.kind,
           creatorId: actor.id,
           creatorName: actor.name,

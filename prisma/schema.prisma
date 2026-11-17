@@ -28,10 +28,25 @@ model Board {
 	// Short guidance on how work flows on the board, seeded by the template.
 	notice			String? @db.Text
 
+	keyPrefix       String?
+	nextCardNumber  Int @default(1)
+	keyPrefixes     BoardKeyPrefix[]
+
 	lists			List[]
 
 	createdAt		DateTime @default(now())
 	updatedAt		DateTime @updatedAt
+}
+
+// Current and historical prefixes share one workspace namespace.
+model BoardKeyPrefix {
+  orgId   String
+  prefix  String
+  boardId String
+  board   Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@id([orgId, prefix])
+  @@index([boardId])
 }
 
 model List {
@@ -51,6 +66,7 @@ model List {
 }
 
 model Card {
+	number      Int?
 	id			String @id @default(uuid())
 	title		String
 	order		Int
