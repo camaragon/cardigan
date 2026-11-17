@@ -86,7 +86,7 @@ describe.skipIf(!hasTestDatabase)("board templates", async () => {
     try {
       const { body } = await client.call("describe_workspace");
       expect(body.boards).toEqual([{
-        id: board.id, title: board.title, template: "product_management", notice: board.notice,
+        id: board.id, title: board.title, template: "product_management", notice: board.notice, keyPrefix: null,
         lists: remaining.map(({ id, title }) => ({ id, title })),
       }]);
       expect(body.labels.map((label: { name: string }) => label.name)).toEqual(["Bug", "Chore", "Feature"]);
