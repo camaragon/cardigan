@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
-import { updateBoard } from "@/lib/domain/boards";
+import { createBoard, updateBoard } from "@/lib/domain/boards";
 import { copyCard, createCard, moveCard } from "@/lib/domain/cards";
 import { cloneList } from "@/lib/domain/lists";
 import { deleteCard } from "@/lib/domain/deletes";
@@ -68,9 +68,13 @@ describe.skipIf(!hasTestDatabase)("board card numbers", () => {
     await expect(updateBoard(agent(), { id: board.id, keyPrefix: "DEMO" })).rejects.toMatchObject({ type: "denied" });
     await expect(updateBoard(owner("other"), { id: board.id, keyPrefix: "DEMO" })).rejects.toThrow();
     for (const keyPrefix of ["", "x", "lower", "1ABC", "TOOLONGPREFIX"]) {
-      await expect(updateBoard(owner(), { id: board.id, keyPrefix })).rejects.toThrow();
+      await expect(updateBoard(owner(), { id: board.id, keyPrefix })).rejects.toMatchObject({ type: "invalid" });
     }
     await updateBoard(owner(), { id: board.id, keyPrefix: "DEMO" });
+    await expect(createBoard(owner(), {
+      title: "Invalid prefix", keyPrefix: "bad",
+      image: { imageId: "demo", imageThumbUrl: "thumb", imageFullUrl: "full", imageUserName: "demo", imageLinkHTML: "link" },
+    })).rejects.toMatchObject({ type: "invalid" });
     const other = await seedBoard(owner("other"));
     expect((await updateBoard(owner("other"), { id: other.board.id, keyPrefix: "DEMO" })).keyPrefix).toBe("DEMO");
   });

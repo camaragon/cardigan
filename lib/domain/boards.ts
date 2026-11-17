@@ -33,7 +33,9 @@ export const createBoard = async (actor: Actor, input: CreateBoardInput) => {
   const template: BoardTemplate = TEMPLATES[input.template ?? "blank"];
   if (!template) throw new DomainError("invalid", "Unknown board template");
 
-  const prefix = input.keyPrefix === undefined ? undefined : KeyPrefix.parse(input.keyPrefix);
+  const parsed = KeyPrefix.optional().safeParse(input.keyPrefix);
+  if (!parsed.success) throw new DomainError("invalid", parsed.error.issues[0].message);
+  const prefix = parsed.data;
   return transaction(async (tx) => {
     const board = await tx.board.create({
       data: {
@@ -111,7 +113,9 @@ export const describeWorkspace = async (actor: Actor) => {
 export const updateBoard = async (actor: Actor, input: { id: string; title?: string; image?: string; notice?: string; keyPrefix?: string }) => {
   requirePerson(actor);
   const { id, title, image, notice } = input;
-  const prefix = input.keyPrefix === undefined ? undefined : KeyPrefix.parse(input.keyPrefix);
+  const parsed = KeyPrefix.optional().safeParse(input.keyPrefix);
+  if (!parsed.success) throw new DomainError("invalid", parsed.error.issues[0].message);
+  const prefix = parsed.data;
   // Build update data object
   const updateData: {
     title?: string;
