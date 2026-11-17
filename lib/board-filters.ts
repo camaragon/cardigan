@@ -3,7 +3,7 @@ import type { CardWithLabels } from "@/types";
 type FilterCard = Pick<
   CardWithLabels,
   "title" | "description" | "creatorKind" | "creatorId" | "creatorName"
-> & { labels: { label: { id: string } }[] };
+> & { key?: string | null; keyAliases?: string[]; labels: { label: { id: string } }[] };
 
 export type BoardFilters = {
   search: string;
@@ -31,7 +31,8 @@ export function matchesBoardFilters(card: FilterCard, filters: BoardFilters): bo
   const query = filters.search.trim().toLowerCase();
   return (
     (!query ||
-      [card.title, card.description].some((text) => text?.toLowerCase().includes(query))) &&
+      [card.title, card.description].some((text) => text?.toLowerCase().includes(query)) ||
+      [card.key, ...(card.keyAliases ?? [])].some((key) => key?.toLowerCase() === query)) &&
     (!filters.labels.length ||
       card.labels.some(({ label }) => filters.labels.includes(label.id))) &&
     (!filters.kind || (card.creatorKind === "AGENT" ? "agents" : "people") === filters.kind) &&

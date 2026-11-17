@@ -9,6 +9,8 @@ import {
 it("searches loaded text, matches any selected label, and intersects creator filters", () => {
   const card: Parameters<typeof matchesBoardFilters>[0] = {
     title: "Improve navigation",
+    key: "DEMO-12",
+    keyAliases: ["ABC-12"],
     description: "Keyboard shortcuts",
     creatorKind: "OWNER",
     creatorId: "person_demo",
@@ -32,6 +34,12 @@ it("searches loaded text, matches any selected label, and intersects creator fil
   expect(matchesBoardFilters(card, emptyBoardFilters)).toBe(true);
   expect(matchesBoardFilters(card, { ...emptyBoardFilters, search: "NAVIGATION" })).toBe(true);
   expect(matchesBoardFilters(card, filters)).toBe(true);
+  for (const search of ["demo-12", "abc-12"]) {
+    expect(matchesBoardFilters(card, { ...emptyBoardFilters, search })).toBe(true);
+  }
+  for (const search of ["demo", "demo-1", "abc", "abc-1"]) {
+    expect(matchesBoardFilters(card, { ...emptyBoardFilters, search })).toBe(false);
+  }
   expect(matchesBoardFilters({ ...card, creatorKind: "MEMBER" }, filters)).toBe(true);
   expect(matchesBoardFilters(agent, filters)).toBe(false);
   expect(

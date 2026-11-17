@@ -1,3 +1,4 @@
+import { KeyPrefix } from "@/lib/card-key";
 import { z } from "zod";
 import { BoardTemplateKey, TEMPLATES } from "@/lib/domain/templates";
 
@@ -12,6 +13,7 @@ export const CreateBoard = z.object({
       message: "Title is required",
     }),
   template: z.enum(Object.keys(TEMPLATES) as [BoardTemplateKey, ...BoardTemplateKey[]]).optional(),
+  keyPrefix: KeyPrefix.optional(),
   image: z.string({
     required_error: "Image is required",
     invalid_type_error: "Image is required",

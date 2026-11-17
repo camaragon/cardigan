@@ -18,6 +18,7 @@ interface FormInputProps {
   className?: string;
   defaultValue?: string;
   onBlur?: () => void;
+  onChange?: React.ChangeEventHandler<HTMLInputElement>;
 }
 
 export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
@@ -33,6 +34,7 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
       className,
       defaultValue = "",
       onBlur,
+      onChange,
     },
     ref,
   ) => {
@@ -51,6 +53,7 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
           ) : null}
           <Input
             onBlur={onBlur}
+            onChange={onChange}
             defaultValue={defaultValue}
             ref={ref}
             required={required}

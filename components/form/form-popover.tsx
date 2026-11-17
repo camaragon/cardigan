@@ -9,13 +9,14 @@ import {
 import { useAction } from "@/hooks/use-action";
 import { createBoard } from "@/actions/create-board";
 import { updateBoard } from "@/actions/update-board";
+import { KeyPrefixInput } from "./key-prefix-input";
 import { FormInput } from "./form-input";
 import { FormSubmit } from "./form-submit";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { FormPicker } from "./form-picker";
-import { useId, useRef } from "react";
+import { useId, useRef, useState } from "react";
 import { BoardTemplateKey, TEMPLATES } from "@/lib/domain/templates";
 import { useRouter } from "next/navigation";
 import { useProModal } from "@/hooks/use-pro-modal";
@@ -38,6 +39,11 @@ export const FormPopover = ({
   boardId,
 }: FormPopoverProps) => {
   const templateId = useId();
+  const [template, setTemplate] = useState<BoardTemplateKey>("blank");
+  const [title, setTitle] = useState("");
+  const [prefixDraft, setPrefixDraft] = useState<string | null>(null);
+  const suggestion = title.toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/^[0-9]+/, "").slice(0, 10);
+  const keyPrefix = prefixDraft ?? (suggestion.length >= 2 ? suggestion : "DEMO");
   const proModal = useProModal();
   const router = useRouter();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -52,7 +58,7 @@ export const FormPopover = ({
       },
       onError: (error) => {
         toast.error(error);
-        proModal.onOpen();
+        if (error.includes("limit of free boards")) proModal.onOpen();
       },
     }
   );
@@ -84,7 +90,7 @@ export const FormPopover = ({
     if (mode === "create") {
       const title = formData.get("title") as string;
       const template = (formData.get("template") ?? "blank") as BoardTemplateKey;
-      executeCreate({ title, image, template });
+      executeCreate({ title, image, template, keyPrefix: template === "product_management" ? keyPrefix : undefined });
     } else {
       if (!boardId) {
         toast.error("Board ID is required for update");
@@ -97,7 +103,9 @@ export const FormPopover = ({
   const isCreateMode = mode === "create";
 
   return (
-    <Popover>
+    <Popover onOpenChange={open => {
+      if (!open) { setTitle(""); setTemplate("blank"); setPrefixDraft(null); }
+    }}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
         align={align}
@@ -123,6 +131,7 @@ export const FormPopover = ({
               <FormInput
                 id="title"
                 label="Board title"
+                onChange={event => setTitle(event.target.value)}
                 type="text"
                 errors={fieldErrors}
               />
@@ -138,7 +147,8 @@ export const FormPopover = ({
                 <select
                   id={templateId}
                   name="template"
-                  defaultValue="blank"
+                  value={template}
+                  onChange={event => setTemplate(event.target.value as BoardTemplateKey)}
                   className="block h-8 w-full rounded-md border bg-white px-2 text-sm text-neutral-900 focus-visible:outline-2 focus-visible:outline-blue-600"
                 >
                   {Object.values(TEMPLATES).map((template) => (
@@ -148,6 +158,9 @@ export const FormPopover = ({
                   ))}
                 </select>
               </div>
+            )}
+            {isCreateMode && template === "product_management" && (
+              <KeyPrefixInput value={keyPrefix} onChange={setPrefixDraft} errors={createErrors?.keyPrefix} />
             )}
           </div>
           <FormSubmit className="w-full">

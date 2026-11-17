@@ -67,6 +67,7 @@ export const CardItem = ({ data, index, isDragDisabled = false }: CardItemProps)
               ))}
             </div>
           )}
+          {data.key && <p className="mb-1 text-xs text-neutral-500" translate="no">{data.key}</p>}
           <p className="line-clamp-2 break-words">{data.title}</p>
           {(data.priority !== "none" || data.assignee || data._count.blockedBy > 0) && (
             <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-600">

@@ -1,5 +1,6 @@
 "use client";
 
+import { BoardCardKeys } from "./board-card-keys";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -15,9 +16,10 @@ import { FormPopover } from "@/components/form/form-popover";
 
 interface BoardOptionsProps {
   id: string;
+  keyPrefix: string | null;
 }
 
-export const BoardOptions = ({ id }: BoardOptionsProps) => {
+export const BoardOptions = ({ id, keyPrefix }: BoardOptionsProps) => {
   const { execute, isLoading } = useAction(deleteBoard, {
     onError: (error) => {
       toast.error(error);
@@ -31,7 +33,7 @@ export const BoardOptions = ({ id }: BoardOptionsProps) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button className="h-auto w-auto p-2" variant="transparent">
+        <Button aria-label="Board actions" className="h-auto w-auto p-2" variant="transparent">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
@@ -55,6 +57,7 @@ export const BoardOptions = ({ id }: BoardOptionsProps) => {
             Change background
           </Button>
         </FormPopover>
+        <BoardCardKeys key={keyPrefix ?? "off"} boardId={id} prefix={keyPrefix} />
         <Button
           disabled={isLoading}
           onClick={onDelete}

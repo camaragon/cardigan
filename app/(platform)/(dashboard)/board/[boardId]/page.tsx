@@ -1,3 +1,4 @@
+import { cardKey } from "@/lib/card-key";
 import { db } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
@@ -24,6 +25,7 @@ const BoardIdPage = async ({ params }: BoardIdPageProps) => {
       },
     },
     include: {
+      board: { select: { keyPrefix: true, keyPrefixes: { select: { prefix: true } } } },
       cards: {
         orderBy: {
           order: "asc",
@@ -45,7 +47,14 @@ const BoardIdPage = async ({ params }: BoardIdPageProps) => {
 
   return (
     <div className="p-4 h-full">
-      <ListContainer boardId={boardId} data={lists} />
+      <ListContainer boardId={boardId} data={lists.map(({ board, ...list }) => ({
+        ...list,
+        cards: list.cards.map(card => ({
+          ...card,
+          key: cardKey(board.keyPrefix, card.number),
+          keyAliases: card.number === null ? [] : board.keyPrefixes.map(({ prefix }) => `${prefix}-${card.number}`),
+        })),
+      }))} />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const KeyPrefix = z.string().regex(/^[A-Z][A-Z0-9]{1,9}$/, {
+export const KeyPrefix = z.string().trim().regex(/^[A-Z][A-Z0-9]{1,9}$/, {
   message: "Use 2–10 uppercase letters or digits, starting with a letter",
 });
 
