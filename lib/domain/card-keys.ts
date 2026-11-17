@@ -7,7 +7,7 @@ export const reservePrefix = async (tx: Tx, orgId: string, boardId: string, pref
   await tx.boardKeyPrefix.createMany({ data: [{ orgId, boardId, prefix }], skipDuplicates: true });
   const reserved = await tx.boardKeyPrefix.findUniqueOrThrow({ where: { orgId_prefix: { orgId, prefix } } });
   if (reserved.boardId !== boardId) {
-    throw new DomainError("invalid", "This prefix belongs to another board in this workspace");
+    throw new DomainError("conflict", "This prefix belongs to another board in this workspace");
   }
 };
 

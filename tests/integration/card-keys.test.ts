@@ -49,7 +49,9 @@ describe.skipIf(!hasTestDatabase)("board card numbers", () => {
     expect((await db.boardKeyPrefix.findMany({ where: { boardId: board.id } })).map(p => p.prefix).sort()).toEqual(["ABC", "DEMO"]);
     const other = await seedBoard(owner());
     for (const keyPrefix of ["DEMO", "ABC"]) {
-      await expect(updateBoard(owner(), { id: other.board.id, keyPrefix })).rejects.toThrow("another board");
+      await expect(updateBoard(owner(), { id: other.board.id, keyPrefix })).rejects.toMatchObject({
+        type: "conflict", message: "This prefix belongs to another board in this workspace",
+      });
     }
     expect((await updateBoard(member(), { id: board.id, keyPrefix: "DEMO" })).keyPrefix).toBe("DEMO");
     expect(await db.auditLog.count({ where: { entityId: board.id, entityTitle: { contains: "ABC → DEMO" } } })).toBe(1);
