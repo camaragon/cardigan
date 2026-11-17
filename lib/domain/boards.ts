@@ -165,14 +165,21 @@ export const updateBoard = async (actor: Actor, input: { id: string; title?: str
     if (prefix !== undefined && prefix !== previous.keyPrefix) {
       await reservePrefix(tx, actor.orgId, id, prefix);
       if (!previous.keyPrefix) {
-        const cards = await tx.card.findMany({
-          where: { list: { boardId: id } },
-          orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true },
-        });
-        for (const [index, card] of cards.entries()) {
-          await tx.card.update({ where: { id: card.id }, data: { number: index + 1 } });
-        }
-        await tx.board.update({ where: { id }, data: { nextCardNumber: cards.length + 1 } });
+        // Lock the selected cards before numbering so concurrent deletes cannot leave gaps.
+        const count = await tx.$executeRaw`
+          WITH cards AS MATERIALIZED (
+            SELECT c.id, c."createdAt" FROM "Card" c
+            JOIN "List" l ON l.id = c."listId"
+            WHERE l."boardId" = ${id}
+            FOR UPDATE OF c
+          ), numbered AS (
+            SELECT id, row_number() OVER (ORDER BY "createdAt", id)::integer AS number
+            FROM cards
+          )
+          UPDATE "Card" c SET "number" = n.number, "updatedAt" = CURRENT_TIMESTAMP
+          FROM numbered n WHERE c.id = n.id
+        `;
+        await tx.board.update({ where: { id }, data: { nextCardNumber: count + 1 } });
       }
     }
     const board = await tx.board.update({ where: { id, orgId: actor.orgId }, data: { ...updateData, keyPrefix: prefix } });
