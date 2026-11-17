@@ -1,9 +1,9 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { FetchError, fetcher } from "@/lib/fetcher";
 
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), findUnique: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), findFirst: vi.fn() }));
 vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth }));
-vi.mock("@/lib/db", () => ({ db: { card: { findUnique: mocks.findUnique } } }));
+vi.mock("@/lib/db", () => ({ db: { card: { findFirst: mocks.findFirst } } }));
 import { GET } from "@/app/api/cards/[cardId]/route";
 const read = () => GET(new Request("http://localhost/api/cards/deleted"), {
   params: Promise.resolve({ cardId: "deleted" }),
@@ -25,18 +25,18 @@ it("returns successful JSON data", async () => {
 
 it("returns 404 for deleted or unavailable cards with the same workspace filter", async () => {
   mocks.auth.mockResolvedValue({ userId: "user", orgId: "workspace" });
-  mocks.findUnique.mockResolvedValue(null);
+  mocks.findFirst.mockResolvedValue(null);
   expect((await read()).status).toBe(404);
-  expect(mocks.findUnique).toHaveBeenCalledWith(expect.objectContaining({
-    where: { id: "deleted", list: { board: { orgId: "workspace" } } },
+  expect(mocks.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+    where: { OR: [{ id: "deleted" }], list: { board: { orgId: "workspace" } } },
   }));
 });
 
 it("keeps unauthenticated reads at 401 and server failures at 500", async () => {
   mocks.auth.mockResolvedValue({ userId: null, orgId: null });
   expect((await read()).status).toBe(401);
-  expect(mocks.findUnique).not.toHaveBeenCalled();
+  expect(mocks.findFirst).not.toHaveBeenCalled();
   mocks.auth.mockResolvedValue({ userId: "user", orgId: "workspace" });
-  mocks.findUnique.mockRejectedValue(new Error("Unavailable"));
+  mocks.findFirst.mockRejectedValue(new Error("Unavailable"));
   expect((await read()).status).toBe(500);
 });

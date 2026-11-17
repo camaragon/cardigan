@@ -18,6 +18,7 @@ import {
   updateCard,
   UpdateCardInput,
 } from "@/lib/domain/cards";
+import { resolveCardId } from "@/lib/domain/card-keys";
 import { getChanges } from "@/lib/domain/changes";
 import { addComment, markDuplicate } from "@/lib/domain/comments";
 import { isDomainError } from "@/lib/domain/errors";
@@ -33,7 +34,7 @@ const INSTRUCTIONS = `Cardigan task board. Start with describe_workspace: it ret
 your capabilities, every board with its lists, and the labels. A denial names the rule, who \
 may act, and what you can do instead. Poll get_changes with the last nextCursor instead of re-listing \
 boards. Creates and comments take an externalKey so retries are safe. Agents cannot delete \
-anything or change settings.`;
+anything or change settings. Card references accept ids or keys such as DEMO-12, including old prefixes. Results show the current key.`;
 
 /** Every tool the server registers; friction reports name one of them. */
 export const TOOL_NAMES = [
@@ -54,6 +55,7 @@ type ToolName = (typeof TOOL_NAMES)[number];
 // Text rules come from the server actions' schemas, so people and agents
 // follow the same ones.
 const id = z.string().min(1).max(100);
+const cardReference = id.describe("Card id or key (for example DEMO-12); old prefixes also resolve in your workspace");
 const externalKey = z.string().min(1).max(LIMITS.externalKey);
 const { title, description, priority, assignee, blockedByIds } = UpdateCard.shape;
 const { body } = AddComment.shape;
@@ -126,7 +128,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
     "search_cards",
     {
       description:
-        "Search card titles, descriptions and comments in your workspace. Returns compact cards.",
+        "Search card keys (including old prefixes), titles, descriptions and comments in your workspace. Returns compact cards.",
       inputSchema: {
         query: z.string().trim().min(1).max(LIMITS.query),
         boardId: id.optional(),
@@ -144,7 +146,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
       description:
         "Everything about one card: description, labels, provenance, version, comments and activity. Comments default to the oldest 50; pass commentNextCursor as commentCursor while commentHasMore. Activity is newest event first; pass the last eventId as activityBefore for older events.",
       inputSchema: {
-        cardId: id,
+        cardId: cardReference,
         activityLimit: z.number().int().min(1).max(LIMITS.page).optional(),
         activityBefore: z.number().int().min(1).optional(),
         commentCursor: z.string().min(1).max(1024).optional(),
@@ -179,7 +181,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
       description:
         "Update title, description, priority, assignee or blockedByIds (replacement set in this workspace, no cycles). Empty assignee clears it. Pass the version you read; stale versions are refused.",
       inputSchema: {
-        cardId: id,
+        cardId: cardReference,
         version: z.number().int().min(1),
         title,
         description,
@@ -191,13 +193,14 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
     run("update_card", async (args: UpdateCardInput & { version: number }) =>
       compactCard(
         await updateCard(actor, {
-          cardId: args.cardId,
+          cardId: await resolveCardId(actor.orgId, args.cardId),
           expectedVersion: args.version,
           title: args.title,
           description: args.description,
           priority: args.priority,
           assignee: args.assignee,
-          blockedByIds: args.blockedByIds,
+          blockedByIds: args.blockedByIds === undefined ? undefined
+            : await Promise.all(args.blockedByIds.map(ref => resolveCardId(actor.orgId, ref, "Blocked-by card in this workspace"))),
         }),
       ),
     ),
@@ -209,7 +212,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
       description:
         "Move one card to a list (or within its list) at a zero-based position; defaults to the end. Pass the version you read.",
       inputSchema: {
-        cardId: id,
+        cardId: cardReference,
         toListId: MoveCard.shape.toListId,
         position: MoveCard.shape.position.optional(),
         version: z.number().int().min(1),
@@ -218,7 +221,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
     run("move_card", async (args: { cardId: string; toListId: string; position?: number; version: number }) =>
       compactCard(
         await moveCard(actor, {
-          cardId: args.cardId,
+          cardId: await resolveCardId(actor.orgId, args.cardId),
           toListId: args.toListId,
           position: args.position,
           expectedVersion: args.version,
@@ -233,13 +236,13 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
       description:
         "Comment on any card in your workspace. Retrying with the same externalKey and body adds nothing new.",
       inputSchema: {
-        cardId: id,
+        cardId: cardReference,
         body,
         externalKey,
       },
     },
     run("add_comment", async (args: { cardId: string; body: string; externalKey: string }) => {
-      const { comment, created } = await addComment(actor, args);
+      const { comment, created } = await addComment(actor, { ...args, cardId: await resolveCardId(actor.orgId, args.cardId) });
       return { commentId: comment.id, created };
     }),
   );
@@ -250,14 +253,17 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
       description:
         "Mark a card you may edit as a duplicate of a canonical card (any list) by adding a duplicate comment. Neither card is deleted.",
       inputSchema: {
-        cardId: id,
-        canonicalCardId: id,
+        cardId: cardReference,
+        canonicalCardId: cardReference,
         note: body.optional(),
         externalKey,
       },
     },
     run("mark_duplicate", async (args: { cardId: string; canonicalCardId: string; note?: string; externalKey: string }) => {
-      const { comment, created } = await markDuplicate(actor, args);
+      const { comment, created } = await markDuplicate(actor, {
+        ...args, cardId: await resolveCardId(actor.orgId, args.cardId),
+        canonicalCardId: await resolveCardId(actor.orgId, args.canonicalCardId),
+      });
       return { commentId: comment.id, created };
     }),
   );

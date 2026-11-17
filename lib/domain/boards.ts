@@ -84,6 +84,7 @@ export const describeWorkspace = async (actor: Actor) => {
         id: true,
         title: true,
         template: true,
+        keyPrefix: true,
         notice: true,
         lists: {
           orderBy: { order: "asc" },

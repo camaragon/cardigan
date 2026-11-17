@@ -1,3 +1,6 @@
+import { Prisma } from "@prisma/client";
+import { db } from "@/lib/db";
+import { notFound } from "./errors";
 import { Tx } from "./audit";
 import { DomainError } from "./errors";
 import { lockBoardOrder } from "./ordering";
@@ -20,4 +23,25 @@ export const allocateCardNumbers = async (tx: Tx, boardId: string, count = 1) =>
     where: { id: boardId }, data: { nextCardNumber: { increment: count } },
   });
   return updated.nextCardNumber - count;
+};
+
+/** Ids and current/historical keys always resolve inside one workspace. */
+export const cardReferenceWhere = (orgId: string, reference: string): Prisma.CardWhereInput => {
+  const match = /^([A-Z][A-Z0-9]{1,9})-([1-9][0-9]*)$/i.exec(reference);
+  const number = match ? Number(match[2]) : 0;
+  return {
+    list: { board: { orgId } },
+    OR: [
+      { id: reference },
+      ...(match && number <= 2147483647 ? [{
+        number, list: { board: { keyPrefixes: { some: { prefix: match[1].toUpperCase() } } } },
+      }] : []),
+    ],
+  };
+};
+
+export const resolveCardId = async (orgId: string, reference: string, label = "Card") => {
+  const card = await db.card.findFirst({ where: cardReferenceWhere(orgId, reference), select: { id: true } });
+  if (!card) throw notFound(label);
+  return card.id;
 };

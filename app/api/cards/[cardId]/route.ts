@@ -1,3 +1,5 @@
+import { cardKey } from "@/lib/card-key";
+import { cardReferenceWhere } from "@/lib/domain/card-keys";
 import { db } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
@@ -15,20 +17,14 @@ export async function GET(
 
     const { cardId } = await params;
 
-    const card = await db.card.findUnique({
-      where: {
-        id: cardId,
-        list: {
-          board: {
-            orgId,
-          },
-        },
-      },
+    const card = await db.card.findFirst({
+      where: cardReferenceWhere(orgId, cardId),
       include: {
         blockedBy: { include: { blocker: { select: { id: true, title: true } } } },
         list: {
           select: {
             title: true,
+            board: { select: { keyPrefix: true } },
           },
         },
         labels: {
@@ -41,7 +37,8 @@ export async function GET(
 
     if (!card) return new NextResponse("Not Found", { status: 404 });
 
-    return NextResponse.json(card);
+    const { board, ...list } = card.list;
+    return NextResponse.json({ ...card, list, key: cardKey(board.keyPrefix, card.number) });
   } catch {
     return new NextResponse("Internal Error", { status: 500 });
   }
