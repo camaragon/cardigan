@@ -21,11 +21,16 @@ describe.skipIf(!hasTestDatabase)("board card numbers", () => {
     const { board, lists } = await seedBoard(owner());
     const at = new Date("2026-01-01");
     await db.card.createMany({ data: [
-      { id: "b", title: "Second", listId: lists.todo.id, order: 0, createdAt: at },
+      { id: "b", title: "Second", listId: lists.todo.id, order: 0, createdAt: at, updatedAt: at, version: 3 },
       { id: "a", title: "First", listId: lists.doing.id, order: 9, createdAt: at },
       { id: "c", title: "Third", listId: lists.todo.id, order: 1, createdAt: new Date("2026-01-02") },
     ] });
+    const editState = () => db.card.findMany({
+      orderBy: { id: "asc" }, select: { id: true, updatedAt: true, version: true },
+    });
+    const before = await editState();
     await updateBoard(member(), { id: board.id, keyPrefix: "DEMO" });
+    expect(await editState()).toEqual(before);
     expect((await db.card.findMany({ orderBy: { id: "asc" } })).map(c => c.number)).toEqual([1, 2, 3]);
     const { card } = await createCard(owner(), { listId: lists.todo.id, title: "Fourth" });
     expect(card.number).toBe(4);

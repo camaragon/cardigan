@@ -176,7 +176,7 @@ export const updateBoard = async (actor: Actor, input: { id: string; title?: str
             SELECT id, row_number() OVER (ORDER BY "createdAt", id)::integer AS number
             FROM cards
           )
-          UPDATE "Card" c SET "number" = n.number, "updatedAt" = CURRENT_TIMESTAMP
+          UPDATE "Card" c SET "number" = n.number
           FROM numbered n WHERE c.id = n.id
         `;
         await tx.board.update({ where: { id }, data: { nextCardNumber: count + 1 } });
