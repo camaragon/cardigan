@@ -78,7 +78,7 @@ export const ListHeader = ({ data, onAddCardAction }: ListHeaderProps) => {
             id="title"
             placeholder="Enter list title..."
             defaultValue={title}
-            className="text-sm px-[7px] py-1 h-7 font-medium border-transparent hover:border-input focus:border-input transition truncate bg-transparent focus:bg-neutral-900"
+            className="text-sm px-[7px] py-1 h-7 font-medium border-transparent hover:border-input focus:border-input transition truncate bg-transparent focus:bg-white"
           />
           <button type="submit" hidden />
         </form>
@@ -92,7 +92,7 @@ export const ListHeader = ({ data, onAddCardAction }: ListHeaderProps) => {
       )}
       <span
         aria-label={`${data.cards.length} cards`}
-        className="mt-1 rounded-full bg-white/15 px-1.5 text-xs font-medium tabular-nums text-neutral-300"
+        className="mt-1 rounded-full bg-black/10 px-1.5 text-xs font-medium tabular-nums text-neutral-600"
       >
         {data.cards.length}
       </span>
