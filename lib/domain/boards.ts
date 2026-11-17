@@ -187,8 +187,7 @@ export const updateBoard = async (actor: Actor, input: { id: string; title?: str
       }
     }
     const board = await tx.board.update({ where: { id, orgId: actor.orgId }, data: { ...updateData, keyPrefix: prefix } });
-    await writeAudit(tx, actor, { action: ACTION.UPDATE, entityType: ENTITY_TYPE.BOARD, entityId: board.id, entityTitle: prefix !== undefined && prefix !== previous.keyPrefix
-      ? `${board.title} (card prefix: ${previous.keyPrefix ?? "off"} → ${prefix})` : board.title });
+    await writeAudit(tx, actor, { action: ACTION.UPDATE, entityType: ENTITY_TYPE.BOARD, entityId: board.id, entityTitle: board.title });
     return board;
   });
 };

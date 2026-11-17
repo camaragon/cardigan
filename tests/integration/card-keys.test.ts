@@ -54,7 +54,8 @@ describe.skipIf(!hasTestDatabase)("board card numbers", () => {
       });
     }
     expect((await updateBoard(member(), { id: board.id, keyPrefix: "DEMO" })).keyPrefix).toBe("DEMO");
-    expect(await db.auditLog.count({ where: { entityId: board.id, entityTitle: { contains: "ABC → DEMO" } } })).toBe(1);
+    expect(await db.auditLog.findFirst({ where: { entityId: board.id }, orderBy: { eventId: "desc" } }))
+      .toMatchObject({ action: "UPDATE", entityTitle: board.title });
   });
 
   it("never frees a deleted card's number", async () => {
