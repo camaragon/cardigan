@@ -1,3 +1,4 @@
+import { cardReferenceWhere } from "@/lib/domain/card-keys";
 import { db } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { OUTCOME } from "@prisma/client";
@@ -14,7 +15,10 @@ export const GET = async (
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { cardId } = await params;
+    const { cardId: reference } = await params;
+    const card = await db.card.findFirst({ where: cardReferenceWhere(orgId, reference), select: { id: true } });
+    if (!card) return new NextResponse("Not Found", { status: 404 });
+    const cardId = card.id;
 
     const auditLogs = await db.auditLog.findMany({
       where: {

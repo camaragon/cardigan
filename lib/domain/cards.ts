@@ -5,13 +5,15 @@ import { transaction, Tx, writeAudit } from "./audit";
 import { denied, DomainError, notFound } from "./errors";
 import { keyedWrite } from "./keys";
 import { LIMITS } from "./limits";
+import { cardKey } from "@/lib/card-key";
+import { cardReferenceWhere } from "./card-keys";
 import { allocateCardNumbers } from "./card-keys";
 import { lockBoardOrder } from "./ordering";
 import { CardFields, CARD_PRIORITIES } from "./card-fields";
 import { validateBlockers } from "./dependencies";
 
 const cardWithContext = {
-  list: true,
+  list: { include: { board: { select: { keyPrefix: true } } } },
   labels: { include: { label: true } },
   blockedBy: { include: { blocker: { select: { id: true, title: true } } } },
 } satisfies Prisma.CardInclude;
@@ -27,7 +29,7 @@ export const loadCard = async (
   cardId: string,
 ) => {
   const card = await tx.card.findFirst({
-    where: { id: cardId, list: { board: { orgId: actor.orgId } } },
+    where: cardReferenceWhere(actor.orgId, cardId),
     include: cardWithContext,
   });
   if (!card) throw notFound("Card");
@@ -55,6 +57,7 @@ export const requireCapability = (actor: Actor, capability: Capability) => {
 /** Compact card shape for agent results (PRD S-3). */
 export const compactCard = (card: CardWithContext) => ({
   id: card.id,
+  key: cardKey(card.list.board.keyPrefix, card.number),
   title: card.title,
   listId: card.listId,
   list: card.list.title,
@@ -551,6 +554,7 @@ export const searchCards = async (
         ...(options.boardId ? { boardId: options.boardId } : {}),
       },
       OR: [
+        cardReferenceWhere(actor.orgId, options.query),
         { title: contains },
         { description: contains },
         { comments: { some: { body: contains } } },
