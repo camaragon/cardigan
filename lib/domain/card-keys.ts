@@ -40,8 +40,8 @@ export const cardReferenceWhere = (orgId: string, reference: string): Prisma.Car
   };
 };
 
-export const resolveCardId = async (orgId: string, reference: string) => {
+export const resolveCardId = async (orgId: string, reference: string, label = "Card") => {
   const card = await db.card.findFirst({ where: cardReferenceWhere(orgId, reference), select: { id: true } });
-  if (!card) throw notFound("Card");
+  if (!card) throw notFound(label);
   return card.id;
 };

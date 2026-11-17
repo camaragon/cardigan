@@ -30,6 +30,8 @@ describe.skipIf(!hasTestDatabase)("card key lookup", () => {
       }
       expect((await local.call("search_cards", { query: "demo-1" })).body.cards[0].id).toBe(card.id);
       expect((await foreign.call("search_cards", { query: "DEMO-1" })).body.cards).toEqual([]);
+      expect((await local.call("update_card", { cardId: "DEMO-1", version: 1, blockedByIds: ["missing"] })).body.error)
+        .toMatchObject({ type: "not_found", message: "Blocked-by card in this workspace not found" });
       expect((await local.call("update_card", { cardId: "DEMO-1", version: 1, blockedByIds: ["DEMO-2"] })).body)
         .toMatchObject({ id: card.id, key: "ABC-1", blockedByIds: [blocker.id] });
       expect((await local.call("move_card", { cardId: "DEMO-1", version: 2, toListId: lists.done.id })).body)

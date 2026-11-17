@@ -200,7 +200,7 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
           priority: args.priority,
           assignee: args.assignee,
           blockedByIds: args.blockedByIds === undefined ? undefined
-            : await Promise.all(args.blockedByIds.map(ref => resolveCardId(actor.orgId, ref))),
+            : await Promise.all(args.blockedByIds.map(ref => resolveCardId(actor.orgId, ref, "Blocked-by card in this workspace"))),
         }),
       ),
     ),
