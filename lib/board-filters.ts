@@ -31,7 +31,8 @@ export function matchesBoardFilters(card: FilterCard, filters: BoardFilters): bo
   const query = filters.search.trim().toLowerCase();
   return (
     (!query ||
-      [card.title, card.description, card.key, ...(card.keyAliases ?? [])].some((text) => text?.toLowerCase().includes(query))) &&
+      [card.title, card.description].some((text) => text?.toLowerCase().includes(query)) ||
+      [card.key, ...(card.keyAliases ?? [])].some((key) => key?.toLowerCase() === query)) &&
     (!filters.labels.length ||
       card.labels.some(({ label }) => filters.labels.includes(label.id))) &&
     (!filters.kind || (card.creatorKind === "AGENT" ? "agents" : "people") === filters.kind) &&

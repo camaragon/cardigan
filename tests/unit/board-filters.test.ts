@@ -37,6 +37,9 @@ it("searches loaded text, matches any selected label, and intersects creator fil
   for (const search of ["demo-12", "abc-12"]) {
     expect(matchesBoardFilters(card, { ...emptyBoardFilters, search })).toBe(true);
   }
+  for (const search of ["demo", "demo-1", "abc", "abc-1"]) {
+    expect(matchesBoardFilters(card, { ...emptyBoardFilters, search })).toBe(false);
+  }
   expect(matchesBoardFilters({ ...card, creatorKind: "MEMBER" }, filters)).toBe(true);
   expect(matchesBoardFilters(agent, filters)).toBe(false);
   expect(
