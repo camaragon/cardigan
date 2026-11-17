@@ -1,3 +1,4 @@
+import { KeyPrefix } from "@/lib/card-key";
 import { z } from "zod";
 
 export const UpdateBoard = z.object({
@@ -11,6 +12,7 @@ export const UpdateBoard = z.object({
       message: "Title is required",
     })
     .optional(),
+  keyPrefix: KeyPrefix.optional(),
   image: z.string().optional(),
   notice: z.string().trim().max(2000).optional(),
   id: z.string(),

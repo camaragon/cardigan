@@ -58,6 +58,7 @@ export const Header = ({ data }: HeaderProps) => {
   return (
     <div className="mb-3 w-full min-w-0 pr-16">
       <div className="w-full">
+        {data.key && <p className="mb-1 text-xs text-muted-foreground" translate="no">{data.key}</p>}
         <form action={onSubmit}>
           <label htmlFor="title" className="sr-only">Card title</label>
           <Input

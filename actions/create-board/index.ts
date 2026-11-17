@@ -29,7 +29,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     };
   }
 
-  const { title, image, template } = data;
+  const { title, image, template, keyPrefix } = data;
 
   const [imageId, imageThumbUrl, imageFullUrl, imageLinkHTML, imageUserName] =
     image.split("|");
@@ -77,6 +77,7 @@ const handler = async (data: InputType): Promise<ReturnType> => {
     board = await createBoardInDomain(actor, {
       title,
       template,
+      keyPrefix,
       image: {
         imageId: finalImageId,
         imageThumbUrl: finalThumbUrl,

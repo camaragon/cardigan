@@ -29,7 +29,7 @@ export const BoardNavbar = async ({ data }: BoardNavbarProps) => {
         className="order-last col-span-4 flex w-full min-w-0 pb-2 sm:order-none sm:ml-auto sm:w-auto sm:pb-0"
       />
       <div className="ml-auto shrink-0 sm:ml-0">
-        <BoardOptions id={data.id} />
+        <BoardOptions id={data.id} keyPrefix={data.keyPrefix} />
       </div>
     </div>
   );
