@@ -128,7 +128,7 @@ body {
 
 /* Window horizontal scrolling avoids unsupported nested drag scroll containers.
    Slim, rounded scrollbars for the board and its lists, legible over light photos,
-   dark photos and the black columns. Chromium ignores ::-webkit-scrollbar once
+   dark photos and translucent white lists. Chromium ignores ::-webkit-scrollbar once
    scrollbar-color/width is set, so the standard properties are for Firefox only. */
 html:has(.board-canvas) {
   background: oklch(0.145 0 0);
@@ -158,5 +158,10 @@ html:has(.board-canvas) {
 }
 :is(html:has(.board-canvas), .board-scrollbar)::-webkit-scrollbar-thumb:hover {
   background: rgb(190 190 190 / 90%);
+  background-clip: padding-box;
+}
+
+.board-canvas .board-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(115 115 115 / 90%);
   background-clip: padding-box;
 }

@@ -43,7 +43,7 @@ export const ListItem = ({ data, index, filtering = false, isOrdering = false }:
             className={cn(
               filtering &&
                 "!max-h-[calc(100dvh-14.5rem)] sm:!max-h-[calc(100dvh-12rem)]",
-              "flex max-h-[calc(100dvh-12rem)] sm:max-h-[calc(100dvh-9.5rem)] w-full flex-col rounded-md dark bg-neutral-950 text-foreground ring-1 ring-white/15 shadow-md pb-2",
+              "flex max-h-[calc(100dvh-12rem)] sm:max-h-[calc(100dvh-9.5rem)] w-full flex-col rounded-md bg-white/80 text-foreground ring-1 ring-white/15 shadow-md pb-2",
             )}
           >
             <ListHeader data={data} onAddCardAction={enableEditing} />
