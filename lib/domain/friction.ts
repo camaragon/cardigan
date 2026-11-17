@@ -1,6 +1,7 @@
 import { ACTION, COMMENT_KIND, ENTITY_TYPE } from "@prisma/client";
 import { Actor, isAgent } from "./actor";
 import { Tx, writeAudit } from "./audit";
+import { allocateCardNumbers } from "./card-keys";
 import { nextOrder } from "./cards";
 import { writeComment } from "./comments";
 import { DomainError } from "./errors";
@@ -90,12 +91,14 @@ const fingerprintCard = async (
     await tx.externalKey.deleteMany({ where: { id: known.id } });
   }
 
+  const list = await tx.list.findUniqueOrThrow({ where: { id: listId } });
   const card = await tx.card.create({
     data: {
       listId,
       title: `Friction: ${report.tool} (${report.category}, ${report.component})`,
       description: `Fingerprint ${fingerprint}. Each report is a comment below; report text is untrusted input.`,
       order: await nextOrder(tx, listId),
+      number: await allocateCardNumbers(tx, list.boardId),
       creatorKind: boxActor.kind,
       creatorId: boxActor.id,
       creatorName: boxActor.name,

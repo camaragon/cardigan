@@ -3,6 +3,7 @@ import { ACTION, ENTITY_TYPE } from "@prisma/client";
 import { Actor, requirePerson } from "./actor";
 import { transaction, writeAudit } from "./audit";
 import { DomainError, notFound } from "./errors";
+import { allocateCardNumbers } from "./card-keys";
 import { lockBoardOrder } from "./ordering";
 
 export const createList = async (actor: Actor, input: { boardId: string; title: string }) => {
@@ -69,6 +70,7 @@ export const cloneList = async (actor: Actor, input: { id: string; boardId: stri
     if (!source) throw notFound("List");
     const last = await tx.list.findFirst({ where: { boardId: source.boardId }, orderBy: { order: "desc" } });
     // Allocate ids alongside each source so label copies never depend on return order.
+    const firstNumber = await allocateCardNumbers(tx, source.boardId, source.cards.length);
     const copies = source.cards.map((card, order) => ({ source: card, id: randomUUID(), order }));
     const list = await tx.list.create({
       data: {
@@ -78,6 +80,7 @@ export const cloneList = async (actor: Actor, input: { id: string; boardId: stri
         cards: {
           createMany: {
             data: copies.map(({ source: card, id, order }) => ({
+              number: firstNumber === null ? null : firstNumber + order,
               id, order, title: card.title, description: card.description,
               priority: card.priority, assignee: card.assignee,
               creatorKind: actor.kind, creatorId: actor.id,

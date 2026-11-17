@@ -2,12 +2,16 @@ import { db } from "@/lib/db";
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
 import { Actor, isAgent, requirePerson } from "./actor";
 import { transaction, writeAudit } from "./audit";
+import { KeyPrefix } from "@/lib/card-key";
+import { reservePrefix } from "./card-keys";
+import { lockBoardOrder } from "./ordering";
 import { DomainError } from "./errors";
 import { BoardTemplate, BoardTemplateKey, TEMPLATES } from "./templates";
 
 export interface CreateBoardInput {
   title: string;
   template?: BoardTemplateKey;
+  keyPrefix?: string;
   image: {
     imageId: string;
     imageThumbUrl: string;
@@ -29,16 +33,19 @@ export const createBoard = async (actor: Actor, input: CreateBoardInput) => {
   const template: BoardTemplate = TEMPLATES[input.template ?? "blank"];
   if (!template) throw new DomainError("invalid", "Unknown board template");
 
+  const prefix = input.keyPrefix === undefined ? undefined : KeyPrefix.parse(input.keyPrefix);
   return transaction(async (tx) => {
     const board = await tx.board.create({
       data: {
         orgId: actor.orgId,
         title: input.title,
         template: template.key,
+        keyPrefix: prefix,
         notice: template.notice ?? null,
         ...input.image,
       },
     });
+    if (prefix) await reservePrefix(tx, actor.orgId, board.id, prefix);
     // The workspace audit lock also serializes label seeding across creates.
     await writeAudit(tx, actor, {
       action: ACTION.CREATE,
@@ -101,9 +108,10 @@ export const describeWorkspace = async (actor: Actor) => {
   };
 };
 
-export const updateBoard = async (actor: Actor, input: { id: string; title?: string; image?: string; notice?: string }) => {
+export const updateBoard = async (actor: Actor, input: { id: string; title?: string; image?: string; notice?: string; keyPrefix?: string }) => {
   requirePerson(actor);
   const { id, title, image, notice } = input;
+  const prefix = input.keyPrefix === undefined ? undefined : KeyPrefix.parse(input.keyPrefix);
   // Build update data object
   const updateData: {
     title?: string;
@@ -152,8 +160,24 @@ export const updateBoard = async (actor: Actor, input: { id: string; title?: str
   }
 
   return transaction(async (tx) => {
-    const board = await tx.board.update({ where: { id, orgId: actor.orgId }, data: updateData });
-    await writeAudit(tx, actor, { action: ACTION.UPDATE, entityType: ENTITY_TYPE.BOARD, entityId: board.id, entityTitle: board.title });
+    await lockBoardOrder(tx, id);
+    const previous = await tx.board.findUniqueOrThrow({ where: { id, orgId: actor.orgId } });
+    if (prefix !== undefined && prefix !== previous.keyPrefix) {
+      await reservePrefix(tx, actor.orgId, id, prefix);
+      if (!previous.keyPrefix) {
+        const cards = await tx.card.findMany({
+          where: { list: { boardId: id } },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true },
+        });
+        for (const [index, card] of cards.entries()) {
+          await tx.card.update({ where: { id: card.id }, data: { number: index + 1 } });
+        }
+        await tx.board.update({ where: { id }, data: { nextCardNumber: cards.length + 1 } });
+      }
+    }
+    const board = await tx.board.update({ where: { id, orgId: actor.orgId }, data: { ...updateData, keyPrefix: prefix } });
+    await writeAudit(tx, actor, { action: ACTION.UPDATE, entityType: ENTITY_TYPE.BOARD, entityId: board.id, entityTitle: prefix !== undefined && prefix !== previous.keyPrefix
+      ? `${board.title} (card prefix: ${previous.keyPrefix ?? "off"} → ${prefix})` : board.title });
     return board;
   });
 };
