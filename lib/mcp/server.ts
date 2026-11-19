@@ -3,11 +3,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { AddComment } from "@/actions/add-comment/schema";
 import { CreateCard } from "@/actions/create-card/schema";
+import { CreateBoard } from "@/actions/create-board/schema";
+import { CreateList } from "@/actions/create-list/schema";
 import { MoveCard } from "@/actions/move-card/schema";
 import { UpdateCard } from "@/actions/update-card/schema";
 import { Actor } from "@/lib/domain/actor";
 import { recordFailedCall } from "@/lib/domain/audit";
-import { describeWorkspace } from "@/lib/domain/boards";
+import { createBoard, CreateBoardInput, describeWorkspace } from "@/lib/domain/boards";
+import { deleteBoard } from "@/lib/domain/deletes";
 import {
   compactCard,
   createCards,
@@ -33,12 +36,15 @@ import { LIMITS } from "@/lib/domain/limits";
 const INSTRUCTIONS = `Cardigan task board. Start with describe_workspace: it returns your role, \
 your capabilities, every board with its lists, and the labels. A denial names the rule, who \
 may act, and what you can do instead. Poll get_changes with the last nextCursor instead of re-listing \
-boards. Creates and comments take an externalKey so retries are safe. Agents cannot delete \
-anything or change settings. Card references accept ids or keys such as DEMO-12, including old prefixes. Results show the current key.`;
+boards. Creates and comments take an externalKey so retries are safe. With manage_boards, agents can create boards \
+and delete a board and all its contents by confirming its exact current title. Other deletes and settings changes \
+are unavailable. Card references accept ids or keys such as DEMO-12, including old prefixes. Results show the current key.`;
 
 /** Every tool the server registers; friction reports name one of them. */
 export const TOOL_NAMES = [
   "describe_workspace",
+  "create_board",
+  "delete_board",
   "list_cards",
   "search_cards",
   "get_card",
@@ -105,6 +111,36 @@ export const createMcpServer = (actor: Actor, context: CallContext) => {
       inputSchema: {},
     },
     run("describe_workspace", () => describeWorkspace(actor)),
+  );
+
+  server.registerTool(
+    "create_board",
+    {
+      description: "Create a board with an optional template (blank or product_management), optional ordered listTitles replacing its lists, and optional card keyPrefix. Uses a bundled background. Returns the board id and list ids/titles for create_cards. Retry with the same externalKey and payload to avoid duplicates. Requires manage_boards.",
+      inputSchema: {
+        ...CreateBoard.omit({ image: true }).shape,
+        title: CreateBoard.shape.title.max(LIMITS.title),
+        listTitles: z.array(CreateList.shape.title.max(LIMITS.title)).max(LIMITS.page).optional(),
+        externalKey,
+      },
+    },
+    run("create_board", async (args: CreateBoardInput) => {
+      const board = await createBoard(actor, args);
+      return { id: board.id, title: board.title, keyPrefix: board.keyPrefix, lists: board.lists };
+    }),
+  );
+
+  server.registerTool(
+    "delete_board",
+    {
+      description: "Permanently delete a board and all its lists, cards and comments in your workspace. confirmation must exactly equal its current title from describe_workspace. Cannot be undone. Requires manage_boards.",
+      inputSchema: { boardId: id, confirmation: z.string().min(1) },
+      annotations: { destructiveHint: true },
+    },
+    run("delete_board", async (args: { boardId: string; confirmation: string }) => {
+      const board = await deleteBoard(actor, { id: args.boardId, confirmation: args.confirmation });
+      return { id: board.id, deleted: true };
+    }),
   );
 
   server.registerTool(

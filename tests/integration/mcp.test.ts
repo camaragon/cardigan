@@ -76,7 +76,7 @@ describe.skipIf(!hasTestDatabase)("MCP route", async () => {
     expect(await db.auditLog.count()).toBe(before);
   });
 
-  it("C-2, C-4: task-shaped tools, none that delete or manage tokens or settings", async () => {
+  it("C-2, C-4: task-shaped tools, only board deletion and no token or settings management", async () => {
     const { secret } = await seedAgent(owner(), "agent");
     const agent = await mcpClient(secret);
     const { tools } = await agent.client.listTools();
@@ -85,6 +85,8 @@ describe.skipIf(!hasTestDatabase)("MCP route", async () => {
       [
         "add_comment",
         "create_cards",
+        "create_board",
+        "delete_board",
         "describe_workspace",
         "get_card",
         "get_changes",
@@ -98,7 +100,7 @@ describe.skipIf(!hasTestDatabase)("MCP route", async () => {
     );
     expect([...TOOL_NAMES].sort()).toEqual(names);
     for (const name of names) {
-      expect(name).not.toMatch(/delete|remove|archive|token|setting|role|rule/);
+      if (name !== "delete_board") expect(name).not.toMatch(/delete|remove|archive|token|setting|role|rule/);
     }
   });
 

@@ -1,5 +1,8 @@
 # Board templates are starting points, not workflow rules
 
+Board creation and deletion restrictions below are superseded by
+[ADR 0010](0010-agent-board-management.md).
+
 Status: proposed. Supersedes [ADR 0004](0004-workflow-rules-in-templates.md).
 Amends [ADR 0001](0001-agent-access-through-mcp.md),
 [ADR 0003](0003-backlog-authoritative-during-transition.md) and

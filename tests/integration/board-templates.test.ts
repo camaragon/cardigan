@@ -106,7 +106,7 @@ describe.skipIf(!hasTestDatabase)("board templates", async () => {
       }
     }
     await expect(moveCard({ ...actor, role: { ...actor.role!, capabilities: [] } }, { cardId: card.id, toListId: lists[0].id })).rejects.toMatchObject({ type: "denied" });
-    await expect(createBoard(actor, { title: "Forbidden", image })).rejects.toMatchObject({ type: "denied" });
+    await expect(createBoard({ ...actor, role: { ...actor.role!, capabilities: [] } }, { title: "Forbidden", image })).rejects.toMatchObject({ type: "denied" });
   });
 
   it("T-8: the shared free limit counts Blank and Product management equally", async () => {

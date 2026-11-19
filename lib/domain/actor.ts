@@ -1,5 +1,5 @@
 import { ACTOR_KIND, SURFACE } from "@prisma/client";
-import { DomainError } from "./errors";
+import { denied, DomainError } from "./errors";
 
 /** Core capabilities an agent role may hold (ADR 0004). */
 export const CAPABILITIES = [
@@ -8,6 +8,7 @@ export const CAPABILITIES = [
   "move",
   "comment",
   "duplicate",
+  "manage_boards",
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 
@@ -42,6 +43,15 @@ export const isOwner = (actor: Actor) => actor.kind === ACTOR_KIND.OWNER;
 export const hasCapability = (actor: Actor, capability: Capability) =>
   !isAgent(actor) || Boolean(actor.role?.capabilities.includes(capability));
 
+export const requireBoardManagement = (actor: Actor) => {
+  if (hasCapability(actor, "manage_boards")) return;
+  throw denied("Your role may not create or delete boards", {
+    rule: "role.capability",
+    allowed: ['agent roles with the "manage_boards" capability', "people"],
+    alternative: "Ask the owner to create or delete the board.",
+  });
+};
+
 /** Key scope for retry-safe external keys: the agent's role, or the person kind. */
 export const keyScope = (actor: Actor) =>
   actor.role ? `role:${actor.role.key}` : `person:${actor.id}`;
@@ -49,7 +59,7 @@ export const keyScope = (actor: Actor) =>
 /** Clerk organization role that makes a person the workspace owner. */
 export const OWNER_ORG_ROLE = "org:admin";
 
-/** Catalog mutations retain their existing people-only authority. */
+/** Other catalog mutations retain their existing people-only authority. */
 export const requirePerson = (actor: Actor) => {
   if (isAgent(actor)) throw new DomainError("denied", "Only people can change workspace structure");
 };

@@ -39,7 +39,8 @@ input to its own improvement.
 
 Non-goals:
 
-- public hosting, billing, or agent deletes;
+- public hosting, billing, or agent deletes other than confirmed board deletion
+  ([ADR 0010](../adr/0010-agent-board-management.md));
 - a separate analytics product;
 - vector or semantic search;
 - replacing the supervisor agent's backlog as the record of execution (ADR 0003).
@@ -118,7 +119,8 @@ are recorded by hand.
   Except for C-9, calls made with a token act only in its workspace; other
   workspaces' ids return not found. After revocation the next call fails as
   unauthorized and writes no entry. Token creation and revocation are logged.
-- **C-2 MCP tools:** describe the workspace; list and search cards; get a card;
+- **C-2 MCP tools:** describe the workspace; create and delete boards (ADR 0010);
+  list and search cards; get a card;
   create cards in a batch; update, move, claim, release and comment on cards; mark
   a duplicate; run the changes query; report friction. Results are paginated,
   errors typed, and text length-limited (details in ADR 0001).
@@ -126,8 +128,10 @@ are recorded by hand.
   and one create entry; the same key with a different payload returns a conflict
   error; two roles' keys never collide. An update or move based on a stale card
   version is rejected with the current card and its last actor.
-- **C-4 No agent deletes:** no MCP tool deletes a board, list, card, label or
-  comment, and no agent can create, change or revoke tokens or workspace settings.
+- **C-4 Agent authority:** roles with `manage_boards` may create boards with
+  lists and delete a same-workspace board and its contents after exact current-title
+  confirmation (ADR 0010). Other deletes, existing board/list edits, tokens and
+  workspace settings remain unavailable to agents.
 - **C-5 Attribution:** every agent mutation and failed tool call writes an activity
   entry naming the agent, its token id (never the secret) and the MCP surface. The
   activity view and card comments show agents distinctly from people; entries for

@@ -69,7 +69,8 @@ changes existing boards.
 The describe tool returns each board's lists in order, its labels, its notice and
 its template key, so an agent learns a board's shape by reading it, not from
 the template's list names, which people may rename or delete. Agents keep the workspace agent role and its capabilities; templates add
-no roles and no rules. Agents cannot create boards or edit notices.
+no roles and no rules. Agents with `manage_boards` may create boards with seeded
+or custom lists ([ADR 0010](../adr/0010-agent-board-management.md)); they cannot edit notices.
 
 ## Acceptance criteria
 
