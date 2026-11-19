@@ -1,5 +1,8 @@
 # Agents act through an MCP server over a shared domain layer
 
+Board creation and deletion restrictions below are superseded by
+[ADR 0010](0010-agent-board-management.md); all other authority rules remain.
+
 Status: accepted. The owner decided both open points: direct shared domain
 functions with no internal REST layer for now, and the write-only suggestion box.
 Amended by [ADR 0005](0005-card-claims-and-owner-answers.md) for claims and

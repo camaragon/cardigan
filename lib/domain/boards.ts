@@ -1,18 +1,22 @@
 import { db } from "@/lib/db";
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
-import { Actor, isAgent, requirePerson } from "./actor";
+import { Actor, isAgent, keyScope, requireBoardManagement, requirePerson } from "./actor";
 import { transaction, writeAudit } from "./audit";
 import { KeyPrefix } from "@/lib/card-key";
 import { reservePrefix } from "./card-keys";
 import { lockBoardOrder } from "./ordering";
-import { DomainError } from "./errors";
+import { DomainError, notFound } from "./errors";
 import { BoardTemplate, BoardTemplateKey, TEMPLATES } from "./templates";
+import { keyedWrite } from "./keys";
+import { bundledImages } from "@/constants/bundled-images";
 
 export interface CreateBoardInput {
   title: string;
   template?: BoardTemplateKey;
   keyPrefix?: string;
-  image: {
+  listTitles?: string[];
+  externalKey?: string;
+  image?: {
     imageId: string;
     imageThumbUrl: string;
     imageFullUrl: string;
@@ -23,51 +27,74 @@ export interface CreateBoardInput {
 
 /** Seeds an ordinary, editable board once, with one audited transaction. */
 export const createBoard = async (actor: Actor, input: CreateBoardInput) => {
-  if (isAgent(actor)) {
-    throw new DomainError("denied", "Agents cannot create boards", {
-      rule: "workspace.settings",
-      allowed: ["people"],
-      alternative: "Ask the owner to create the board.",
-    });
-  }
+  requireBoardManagement(actor);
+  if (!input.image && !isAgent(actor)) throw new DomainError("invalid", "Image is required");
+  const background = bundledImages[0];
+  const image = input.image ?? {
+    imageId: background.id, imageThumbUrl: background.urls.thumb,
+    imageFullUrl: background.urls.full, imageUserName: background.user.name,
+    imageLinkHTML: background.links.html,
+  };
   const template: BoardTemplate = TEMPLATES[input.template ?? "blank"];
   if (!template) throw new DomainError("invalid", "Unknown board template");
 
   const parsed = KeyPrefix.optional().safeParse(input.keyPrefix);
   if (!parsed.success) throw new DomainError("invalid", parsed.error.issues[0].message);
   const prefix = parsed.data;
-  return transaction(async (tx) => {
-    const board = await tx.board.create({
-      data: {
-        orgId: actor.orgId,
-        title: input.title,
-        template: template.key,
-        keyPrefix: prefix,
-        notice: template.notice ?? null,
-        ...input.image,
-      },
-    });
-    if (prefix) await reservePrefix(tx, actor.orgId, board.id, prefix);
-    // The workspace audit lock also serializes label seeding across creates.
-    await writeAudit(tx, actor, {
-      action: ACTION.CREATE,
-      entityType: ENTITY_TYPE.BOARD,
-      entityId: board.id,
-      entityTitle: board.title,
-    });
-    for (const [index, title] of template.lists.entries()) {
-      await tx.list.create({ data: { boardId: board.id, title, order: index + 1 } });
-    }
-    for (const label of template.labels) {
-      const existing = await tx.label.findFirst({
-        where: { orgId: actor.orgId, name: label.name },
+  const listTitles = input.listTitles ?? template.lists;
+  const { result } = await keyedWrite({
+    orgId: actor.orgId,
+    scope: keyScope(actor),
+    key: input.externalKey,
+    payload: { title: input.title, template: template.key, keyPrefix: prefix ?? null, listTitles, image },
+    entityType: ENTITY_TYPE.BOARD,
+    tokenId: actor.tokenId,
+    replay: async (tx, id) => {
+      const board = await tx.board.findFirst({
+        where: { id, orgId: actor.orgId },
+        include: { lists: { orderBy: { order: "asc" }, select: { id: true, title: true } } },
       });
-      if (!existing) {
-        await tx.label.create({ data: { ...label, orgId: actor.orgId } });
+      if (!board) throw notFound("Board");
+      return board;
+    },
+    write: async (tx) => {
+      const board = await tx.board.create({
+        data: {
+          orgId: actor.orgId,
+          title: input.title,
+          template: template.key,
+          keyPrefix: prefix,
+          notice: template.notice ?? null,
+          ...image,
+        },
+      });
+      if (prefix) await reservePrefix(tx, actor.orgId, board.id, prefix);
+      // The workspace audit lock also serializes label seeding across creates.
+      await writeAudit(tx, actor, {
+        action: ACTION.CREATE,
+        entityType: ENTITY_TYPE.BOARD,
+        entityId: board.id,
+        entityTitle: board.title,
+      });
+      const lists = [];
+      for (const [index, title] of listTitles.entries()) {
+        lists.push(await tx.list.create({
+          data: { boardId: board.id, title, order: index + 1 },
+          select: { id: true, title: true },
+        }));
       }
-    }
-    return board;
+      for (const label of template.labels) {
+        const existing = await tx.label.findFirst({
+          where: { orgId: actor.orgId, name: label.name },
+        });
+        if (!existing) {
+          await tx.label.create({ data: { ...label, orgId: actor.orgId } });
+        }
+      }
+      return { entityId: board.id, result: { ...board, lists } };
+    },
   });
+  return result;
 };
 
 /**

@@ -1,6 +1,8 @@
 import { ACTION, ENTITY_TYPE } from "@prisma/client";
-import { Actor, requirePerson } from "./actor";
+import { Actor, isAgent, requireBoardManagement, requirePerson } from "./actor";
 import { transaction, writeAudit } from "./audit";
+import { denied, notFound } from "./errors";
+import { lockBoardOrder } from "./ordering";
 
 export const deleteCard = async (actor: Actor, input: { id: string }) => {
   requirePerson(actor);
@@ -39,14 +41,27 @@ export const deleteList = async (actor: Actor, input: { id: string; boardId: str
   });
 };
 
-export const deleteBoard = async (actor: Actor, input: { id: string }) => {
-  requirePerson(actor);
+export const deleteBoard = async (actor: Actor, input: { id: string; confirmation?: string }) => {
+  requireBoardManagement(actor);
   const { id } = input;
   return transaction(async (tx) => {
+    if (isAgent(actor)) {
+      await lockBoardOrder(tx, id);
+      const current = await tx.board.findFirst({ where: { id, orgId: actor.orgId } });
+      if (!current) throw notFound("Board");
+      if (input.confirmation !== current.title) {
+        throw denied("Confirmation must exactly match the board's current title", {
+          rule: "board.delete_confirmation",
+          allowed: ["agents confirming the current board title"],
+          alternative: "Use describe_workspace to read the current title, then confirm it to delete the board and all its contents.",
+        });
+      }
+    }
     const board = await tx.board.delete({
       where: {
         id,
         orgId: actor.orgId,
+        ...(isAgent(actor) ? { title: input.confirmation } : {}),
       },
     });
     await writeAudit(tx, actor, { action: ACTION.DELETE, entityType: ENTITY_TYPE.BOARD, entityId: board.id, entityTitle: board.title });

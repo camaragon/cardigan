@@ -33,7 +33,7 @@ describe.skipIf(!hasTestDatabase)("board notice", async () => {
     const client = await mcpClient(secret);
     try {
       const tools = await client.client.listTools();
-      expect(tools.tools.some((tool) => /board|notice/.test(tool.name))).toBe(false);
+      expect(tools.tools.filter((tool) => /board|notice/.test(tool.name)).map(tool => tool.name).sort()).toEqual(["create_board", "delete_board"]);
       expect((await db.board.findUniqueOrThrow({ where: { id: board.id } })).notice).toBe("Our convention");
     } finally { await client.close(); }
     expect((await updateBoard({ id: board.id, notice: " " })).data?.notice).toBeNull();

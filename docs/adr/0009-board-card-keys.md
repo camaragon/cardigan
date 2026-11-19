@@ -1,6 +1,8 @@
 # Board card keys with stable numbers and prefix aliases
 
 Status: accepted.
+Amended by [ADR 0010](0010-agent-board-management.md): agents may set a prefix
+when creating a board; existing board settings remain people-only.
 
 ## Context
 

@@ -44,6 +44,8 @@ export const keyedWrite = async <T>(
   const run = () =>
     transaction(async (tx) => {
       if (input.key) {
+        // Serialize retries before domain constraints (such as a board prefix) can conflict.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${JSON.stringify(["external-key", input.orgId, input.scope, input.key])}))`;
         const existing = await tx.externalKey.findUnique({
           where: {
             orgId_scope_key: {
